@@ -9,14 +9,29 @@
  * (C) 2007 Mike Dahlin
  *
  */
-public class TransID{
 
+// private static long long tranCurrent = 0;
+
+public class TransID{
+	
+	// private long long tranNum;
+	
   //
   // Implement this class
   //
 
   public TransID()
   {
+	  // tranNum = tranCurrent;
+	  // tranCurrent++;
+  }
+  
+  public boolean equals(Object o) {
+	  return false;
+  }
+  
+  public boolean equals(TransID other) {
+	  return false;
   }
 
   

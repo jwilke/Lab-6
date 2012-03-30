@@ -12,6 +12,19 @@
 import java.io.IOException;
 
 public class Transaction{
+	
+	/*
+	 * TransID id;
+	 * List Writes
+	 * Status (COMMITTED, IN_PROGRESS, ABORTED)
+	 * int start_in_log;
+	 * int num_sects
+	 */
+	
+	public Transaction() {
+		// create variables
+		// status = IN_PROGRESS
+	}
 
     // 
     // You can modify and add to the interfaces
@@ -21,6 +34,10 @@ public class Transaction{
     throws IllegalArgumentException, 
            IndexOutOfBoundsException
     {
+    	// search for write with sectorNum
+    	// if found update write
+    	// else
+    	// add to list of Writes
     }
 
     //
@@ -32,6 +49,9 @@ public class Transaction{
     throws IllegalArgumentException, 
            IndexOutOfBoundsException
     {
+    	// lock
+    	// search list for last committed to secNum
+    	// if found update buffer and return true
         return false;
     }
 
@@ -39,11 +59,13 @@ public class Transaction{
     public void commit()
     throws IOException, IllegalArgumentException
     {
+    	// change status
     }
 
     public void abort()
     throws IOException, IllegalArgumentException
     {
+    	// change status
     }
 
 
@@ -61,12 +83,16 @@ public class Transaction{
     // of sectors in the log in order to place
     // this transaction on disk. Note that the
     // first sector is the header, which lists
-    // which sectors the transaction updaets
+    // which sectors the transaction updates
     // and the last sector is the commit. 
     // The k sectors between should contain
     // the k writes by this transaction.
     //
     public byte[] getSectorsForLog(){
+    	//decide on format for the header. -- include size/length/number of writes, pointer to first sector, etc.
+    	//create a byte array for the header, the writes, and the commit.
+    	//byte ret[] = new byte[(list.length+ 2)*sector_size);
+    	//return ret
         return null;
     }
 
@@ -77,11 +103,15 @@ public class Transaction{
     // writeback is done.
     //
     public void rememberLogSectors(int start, int nSectors){
+    	//start_in_log = start;
+    	//int num_sects = nSectors;
     }
     public int recallLogSectorStart(){
+    	//return start_in_log;
         return -1;
     }
     public int recallLogSectorNSectors(){
+    	//return num_sects
         return -1;
     }
 
@@ -93,6 +123,7 @@ public class Transaction{
     // transaction updates. Used for writeback.
     //
     public int getNUpdatedSectors(){
+    	//return list.length/size
         return -1;
     }
 
@@ -104,8 +135,19 @@ public class Transaction{
     // write in byte array. Used for writeback.
     //
     public int getUpdateI(int i, byte buffer[]){
+    	//if status == committed -> go to the ith (by time) write, update buffer, return sec num
         return -1;
     }
+    
+    /*
+     * Header - 
+     * TranID
+     * length of buffer
+     * secNum first update
+     * secNum second update
+     * ...
+     * secNum ith update 
+     */
 
     
     //
@@ -116,6 +158,9 @@ public class Transaction{
     // header and commit) to get the full transaction.
     //
     public static int parseHeader(byte buffer[]){
+    	// based on the decided format of the header given.
+    	// j = retrieve size from buffer; should be sector size?
+    	// 
         return -1;
     }
 

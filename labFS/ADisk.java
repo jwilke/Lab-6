@@ -10,6 +10,14 @@
 import java.io.IOException;
 
 public class ADisk{
+	/*
+	 * Internal Data
+	 * 
+	 * Disk disk;
+	 * ActiveTransactionList atl;
+	 * WriteBackList wbl
+	 * LogStatus log;
+	 */
 
   //-------------------------------------------------------
   // The size of the redo log in sectors
@@ -31,19 +39,31 @@ public class ADisk{
   //-------------------------------------------------------
   public ADisk(boolean format)
   {
+	  // if format == true 
+	  // wipe disk, write zeros to all
+	  // else
+	  // create new disk
+	  
+	  /*
+	   * allocate:
+	   * atl
+	   * wbl
+	   * log
+	   */
   }
 
   //-------------------------------------------------------
   //
   // Return the total number of data sectors that
-  // can be used *not including space reseved for
-  // the log or other data sructures*. This
+  // can be used *not including space reserved for
+  // the log or other data structures*. This
   // number will be smaller than Disk.NUM_OF_SECTORS.
   //
   //-------------------------------------------------------
   public int getNSectors()
   {
-    return -1; // Fixme
+	  // return Disk.NUM_OF_SECTORS
+	  return -1; // Fixme
   } 
 
   //-------------------------------------------------------
@@ -53,7 +73,9 @@ public class ADisk{
   //-------------------------------------------------------
   public TransID beginTransaction()
   {
-    return null; // Fixme
+	  // Transaction tran = new Transaction
+	  // ATL.put(tran)
+	  return null; // Fixme
   }
 
   //-------------------------------------------------------
@@ -90,6 +112,13 @@ public class ADisk{
   public void commitTransaction(TransID tid) 
     throws IOException, IllegalArgumentException
   {
+	  // change status
+	  // ask log status where to put the log
+	  // issue writes to log
+	  // issue barrier to log
+	  // issue commit to log
+	  // wait for log to finish getting the commit (maybe CallBackTracker)
+	  // move it from atl.remove(tid) to wbl.addCommitted()
   }
 
 
@@ -107,6 +136,7 @@ public class ADisk{
   public void abortTransaction(TransID tid) 
     throws IllegalArgumentException
   {
+	  //atl.remove(tid)
   }
 
 
@@ -136,6 +166,10 @@ public class ADisk{
     throws IOException, IllegalArgumentException, 
     IndexOutOfBoundsException
   {
+	  // get transaction in atl, if found update buffer
+	  // get transaction in wbl, if found update buffer
+	  // check the disk, update buffer
+	  // use callback tracker to wait
   }
 
   //-------------------------------------------------------
@@ -161,6 +195,9 @@ public class ADisk{
     throws IllegalArgumentException, 
     IndexOutOfBoundsException
   {
+	  // look up Transaction by TransID in atl
+	  // add write to transaction (addWrite)
+	  // otherwise create a new one
   }
 
 

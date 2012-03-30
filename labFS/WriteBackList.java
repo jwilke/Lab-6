@@ -10,6 +10,16 @@
  *
  */
 public class WriteBackList{
+	
+	/*
+	 * List of Transactions
+	 * SimpleLock
+	 */
+	
+	public WriteBackList() {
+		// create an empty list of Transactions
+		// create a SimpleLock
+	}
 
     // 
     // You can modify and add to the interfaces
@@ -19,6 +29,8 @@ public class WriteBackList{
     // move it from the ActiveTransactionList to 
     // the WriteBackList
     public void addCommitted(Transaction t){
+    	// lock
+    	// add Transaction to the end of the list
     }
 
     //
@@ -40,6 +52,8 @@ public class WriteBackList{
     // order may not match transaction ID order.
     //    
     public Transaction getNextWriteback(){
+    	// lock
+    	// get first item in list
         return null;
     }
 
@@ -48,6 +62,8 @@ public class WriteBackList{
     // are now safely on disk.
     //
     public Transaction removeNextWriteback(){
+    	// lock
+    	// get and delete first item in list
         return null;
     }
 
@@ -61,6 +77,9 @@ public class WriteBackList{
     throws IllegalArgumentException, 
            IndexOutOfBoundsException
     {
+    	// lock
+    	// search list for last committed to secNum
+    	// if found update buffer and return true
         return false;
     }
 

@@ -13,6 +13,12 @@
  *
  */
 public class LogStatus{
+	
+	/*
+	 * file f
+	 * int start
+	 * int current
+	 */
 
     // 
     // Return the index of the log sector where

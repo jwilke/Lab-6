@@ -13,6 +13,12 @@
 import java.util.Vector;
 
 public class CallbackTracker{
+	
+	/*
+	 * List of DiskResults
+	 * SimpleLock lock
+	 */
+	
     public void requestDone(DiskResult result){
         // TBD
     }

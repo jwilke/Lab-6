@@ -22,3 +22,26 @@ public class Common{
   public static final int WRITE = 1;
   
 }
+
+class Write{
+	
+	/*
+	 * int secNum
+	 * byte oData[]
+	 * byte cData[]
+	 * int time
+	 */
+	
+	public Write(int secNum, byte cb[], byte ob[]) {
+		// init
+	}
+	
+	public boolean isSecNum(int sn) {
+		return false;
+	}
+	
+	public boolean updateBuffer(int secNum, byte b[]) {
+		// return false if this isn't the write sector
+		return false;
+	}
+}
