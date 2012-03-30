@@ -10,11 +10,12 @@
  *
  */
 
-// private static long long tranCurrent = 0;
+
 
 public class TransID{
 	
-	// private long long tranNum;
+	private static long tranCurrent = 0;
+	private long tranNum;
 	
   //
   // Implement this class
@@ -22,17 +23,22 @@ public class TransID{
 
   public TransID()
   {
-	  // tranNum = tranCurrent;
-	  // tranCurrent++;
+	  tranNum = tranCurrent;
+	  tranCurrent++;
   }
   
   public boolean equals(Object o) {
-	  return false;
+	  if (o instanceof TransID)
+		  return equals((TransID) o);
+	  else
+		  return false;
   }
   
   public boolean equals(TransID other) {
-	  return false;
+	  return this.tranNum == other.tranNum;
   }
 
-  
+  public long getTranNum() {
+	  return tranNum;
+  }
 }

@@ -10,6 +10,9 @@
  *
  */
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
 
 public class Transaction{
 	
@@ -20,10 +23,20 @@ public class Transaction{
 	 * int start_in_log;
 	 * int num_sects
 	 */
+
+	
+	TransID id;
+	LinkedList<Write> write_list;
+	byte Status;
+	int start_in_log;
+	int num_sects;
 	
 	public Transaction() {
-		// create variables
-		// status = IN_PROGRESS
+		id = new TransID();
+		write_list = new LinkedList<Write>();
+		Status = Common.IN_PROGRESS;
+		start_in_log = -1; 
+		num_sects = 0;
 	}
 
     // 
@@ -35,9 +48,25 @@ public class Transaction{
            IndexOutOfBoundsException
     {
     	// search for write with sectorNum
-    	// if found update write
-    	// else
-    	// add to list of Writes
+    	Iterator<Write> it = write_list.iterator();
+    	Write temp = null;
+    	boolean found = false;
+    	while(it.hasNext()) {
+    		temp = it.next();
+    		if(temp.secNum == sectorNum) {
+    			found = true;
+    			break;
+    		}
+    	}
+    	
+    	if(found) { // if it was found, update the buffer
+    		temp.updateBuffer(sectorNum, buffer);
+    	} else {  //otherwise, add it to our write_list
+    		Write add = new Write(sectorNum, buffer);
+    		write_list.add(add);
+    		num_sects++;
+    	}
+    	return;
     }
 
     //
@@ -49,9 +78,26 @@ public class Transaction{
     throws IllegalArgumentException, 
            IndexOutOfBoundsException
     {
-    	// lock
-    	// search list for last committed to secNum
+    	// search list for write to secNum
     	// if found update buffer and return true
+    	Iterator<Write> it = write_list.iterator();
+    	Write temp = null;
+    	boolean found = false;
+    	while(it.hasNext()) {
+    		temp = it.next();
+    		if(temp.secNum == sectorNum) {
+    			found = true;
+    			break;
+    		}
+    	}
+    	
+    	if(found) {
+    		for (int i = 0; i < temp.cData.length; i++) {
+    			buffer[i] = temp.cData[i];
+    		}
+    		return true;
+    	}
+    	
         return false;
     }
 
@@ -60,12 +106,14 @@ public class Transaction{
     throws IOException, IllegalArgumentException
     {
     	// change status
+    	Status = Common.COMMITED;
     }
 
     public void abort()
     throws IOException, IllegalArgumentException
     {
     	// change status
+    	Status = Common.ABORTED;    	
     }
 
 
@@ -91,9 +139,48 @@ public class Transaction{
     public byte[] getSectorsForLog(){
     	//decide on format for the header. -- include size/length/number of writes, pointer to first sector, etc.
     	//create a byte array for the header, the writes, and the commit.
-    	//byte ret[] = new byte[(list.length+ 2)*sector_size);
-    	//return ret
-        return null;
+    	/*int ah = write_list.size()*4 - 472;
+    	if(ah > 0) {
+    		ah = (write_list.size()*4 - 472)/512;
+    	} else {
+    		ah = 0;
+    	}*/
+    	
+    	byte ret[] = new byte[(write_list.size() +2)*512];
+    	
+    	longToByte(id.getTranNum(),ret,0);
+    	
+    	int s = write_list.size();
+    	intToByte(s,ret,8);
+    	
+    	ret[12] = Status;
+
+    	Iterator<Write> it = write_list.iterator();
+    	Write temp = null;
+    	int j = 0;
+    	while(it.hasNext()) {
+    		temp = it.next();
+    		intToByte(temp.secNum,ret,40+j*4);
+    		for(int k = 0; k < 512; k++) {
+    			ret[(j+1) * 512 + k] = temp.cData[k]; 
+    		}
+    		j++;
+    	}
+    	
+    	
+        return ret;
+    }
+    
+    public void intToByte(int src, byte dest[], int offset) {
+    	for(int i = 0; i < 4; i++) {
+    		dest[offset+3-i] = (byte) (src >>> (i*8));
+    	}
+    }
+    
+    public void longToByte(long src, byte dest[], int offset) {
+    	for(int i = 0; i < 8; i++) {
+    		dest[offset+7-i] = (byte) (src >>> (i*8));
+    	}
     }
 
     //
@@ -103,16 +190,14 @@ public class Transaction{
     // writeback is done.
     //
     public void rememberLogSectors(int start, int nSectors){
-    	//start_in_log = start;
-    	//int num_sects = nSectors;
+    	start_in_log = start;
+    	num_sects = nSectors;
     }
     public int recallLogSectorStart(){
-    	//return start_in_log;
-        return -1;
+    	return start_in_log;
     }
     public int recallLogSectorNSectors(){
-    	//return num_sects
-        return -1;
+    	return num_sects;
     }
 
 
@@ -123,8 +208,7 @@ public class Transaction{
     // transaction updates. Used for writeback.
     //
     public int getNUpdatedSectors(){
-    	//return list.length/size
-        return -1;
+    	return write_list.size();
     }
 
     //
@@ -135,15 +219,25 @@ public class Transaction{
     // write in byte array. Used for writeback.
     //
     public int getUpdateI(int i, byte buffer[]){
-    	//if status == committed -> go to the ith (by time) write, update buffer, return sec num
+    	if (Status == Common.COMMITED) {
+    		//go to the ith write, update buffer, return sec num
+        	Write temp = write_list.get(i);
+        	for(int j = 0; j < 512; j++) {
+        		buffer[j] = temp.cData[j];
+        	}
+        	return temp.secNum;
+    	}
         return -1;
     }
     
+
     /*
-     * Header - 
-     * TranID
-     * length of buffer
-     * secNum first update
+     * Header
+     * TranID number
+     * number of updates
+     * Status - written to disk or not
+     *   
+     * 40th byte - secNum first update
      * secNum second update
      * ...
      * secNum ith update 
@@ -159,9 +253,9 @@ public class Transaction{
     //
     public static int parseHeader(byte buffer[]){
     	// based on the decided format of the header given.
-    	// j = retrieve size from buffer; should be sector size?
-    	// 
-        return -1;
+    	// j = retrieve size from buffer; return j;
+    	int j = (((int)buffer[8]) << 24) | (((int)buffer[9]) << 16) | (((int)buffer[10]) << 8) | ((int)buffer[11]);
+        return j;
     }
 
     //
@@ -170,7 +264,19 @@ public class Transaction{
     // committed transaction and return it. Otherwise
     // throw an exception or return null.
     public static Transaction parseLogBytes(byte buffer[]){
-        return null;
+    	Transaction t = new Transaction();
+    	t.Status = Common.COMMITED;
+    	
+    	// create array of secNums
+    	int num = parseHeader(buffer);
+    	int j = 0;
+    	for(int i = 0; i < num; i++) {
+    		j = (((int)buffer[40+i]) << 24) | (((int)buffer[41+i]) << 16) | (((int)buffer[42+i]) << 8) | ((int)buffer[43+i]);
+    		t.addWrite(j, Arrays.copyOfRange(buffer, (i+1)*512, (i+2)*512));
+    		j = 0;
+    	}
+    	
+        return t;
     }
     
     

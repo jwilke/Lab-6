@@ -15,17 +15,26 @@
 public class LogStatus{
 	
 	/*
-	 * file f
 	 * int start
 	 * int current
+	 * int firstSecHeader = 2
 	 */
 
+	public LogStatus() {
+		// start - firstSecHeader + sec size
+		// current = start
+		// set in firstSecHeader
+	}
+	
     // 
     // Return the index of the log sector where
     // the next transaction should go.
     //
     public int reserveLogSectors(int nSectors)
     {
+    	// int oldCurent = current
+    	// current += nSectors
+    	// return oldCurrrent
         return -1;
     }
 
@@ -36,7 +45,9 @@ public class LogStatus{
     //
     public int writeBackDone(int startSector, int nSectors)
     {
-        return -1;
+    	// change status of the header
+    	// update start if startSector = start
+        return 1;
     }
 
     //
@@ -47,6 +58,8 @@ public class LogStatus{
     //
     public void recoverySectorsInUse(int startSector, int nSectors)
     {
+    	// set start to startSector
+    	// set current to start+nSectors
     }
 
     //
@@ -60,7 +73,7 @@ public class LogStatus{
     // to find out where to start processing the log from.
     //
     // NOTE: You can update this on-disk info
-    // when you fininish write-back for a transaction. 
+    // when you finish write-back for a transaction. 
     // But, you don't need to keep this on-disk
     // sector exactly in sync with the tail
     // of the log. It can point to a transaction
@@ -76,6 +89,7 @@ public class LogStatus{
     // the sectors about to be reserved/reused.
     //
     public int logStartPoint(){
+    	// return first sec header
         return -1;
     }
     
