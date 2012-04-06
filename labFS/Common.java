@@ -60,6 +60,13 @@ class Write{
 		return true;
 	}
 	
+	public boolean copyFromBuffer(int secNum, byte b[]) {
+		for (int i = 0; i < cData.length && i < b.length; i++) {
+			b[i] = cData[i];
+		}
+		return true;
+	}
+	
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null) return false;

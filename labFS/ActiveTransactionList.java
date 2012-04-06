@@ -24,7 +24,7 @@ public class ActiveTransactionList{
 	
 	public ActiveTransactionList() {
 		list = new ArrayList<Transaction>();
-		SimpleLock lock = new SimpleLock();
+		lock = new SimpleLock();
 	}
 
     /*

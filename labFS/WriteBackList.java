@@ -1,3 +1,6 @@
+import java.util.ArrayList;
+import java.util.concurrent.locks.Condition;
+
 /*
  * WriteBackList.java
  *
@@ -15,11 +18,23 @@ public class WriteBackList{
 	 * List of Transactions
 	 * SimpleLock
 	 */
+	ArrayList<Transaction> list;
+	SimpleLock lock;
+	Condition is_empty;
 	
 	public WriteBackList() {
 		// create an empty list of Transactions
+		list = new ArrayList<Transaction>();
 		// create a SimpleLock
+		lock = new SimpleLock();
+		is_empty = lock.newCondition();
 	}
+	
+	/*
+	public void activateWorker(CallbackTracker cbt) {
+		// create worker
+	}
+	 */
 
     // 
     // You can modify and add to the interfaces
@@ -30,7 +45,13 @@ public class WriteBackList{
     // the WriteBackList
     public void addCommitted(Transaction t){
     	// lock
-    	// add Transaction to the end of the list
+    	lock.lock();
+    	
+    	// add transaction to list
+    	list.add(t);
+    	is_empty.signalAll();
+    	
+    	lock.unlock();
     }
 
     //
@@ -53,8 +74,18 @@ public class WriteBackList{
     //    
     public Transaction getNextWriteback(){
     	// lock
+    	lock.lock();
     	// get first item in list
-        return null;
+    	while(list.size() == 0) {
+			try {
+				is_empty.await();
+			} catch (InterruptedException e) {}
+    	}
+    	
+    	Transaction t = list.get(0);
+    	
+    	lock.unlock();
+    	return t;
     }
 
     //
@@ -63,8 +94,12 @@ public class WriteBackList{
     //
     public Transaction removeNextWriteback(){
     	// lock
+    	lock.lock();
     	// get and delete first item in list
-        return null;
+    	Transaction t = list.remove(0);
+    	
+    	lock.unlock();
+        return t;
     }
 
     //
@@ -78,9 +113,22 @@ public class WriteBackList{
            IndexOutOfBoundsException
     {
     	// lock
+    	lock.lock();
+    	Transaction t;
+    	boolean found = false;
+    	
     	// search list for last committed to secNum
+    	for(int i = list.size()-1; i >= 0; i--) {
+    		t = list.get(i);
+    		if(t.getUpdateS(secNum, buffer)) {
+    			found = true;
+    			break;
+    		}
+    	}
+    	
     	// if found update buffer and return true
-        return false;
+    	lock.unlock();
+        return found;
     }
 
     

@@ -13,6 +13,7 @@ import java.io.IOException;
 //import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.concurrent.locks.Condition;
 
 public class Transaction{
 	
@@ -23,6 +24,11 @@ public class Transaction{
 	private byte Status;
 	private int start_in_log;
 	private int num_sects;
+	SimpleLock lock;
+	private int readers;
+	private boolean is_writing;
+	private Condition CV_reading;
+	private Condition CV_writing;
 	
 	public Transaction() {
 		id = new TransID();
@@ -30,6 +36,11 @@ public class Transaction{
 		Status = Common.IN_PROGRESS;
 		start_in_log = -1; 
 		num_sects = 0;
+		lock = new SimpleLock();
+		readers = 0;
+		is_writing = false;
+		CV_reading = lock.newCondition();
+		CV_writing = lock.newCondition();
 	}
 
     // 
@@ -40,6 +51,15 @@ public class Transaction{
     throws IllegalArgumentException, 
            IndexOutOfBoundsException
     {
+    	lock.lock();
+    	is_writing = true;
+    	
+    	while(readers > 0) {
+    		try{
+    			CV_writing.await();
+    		} catch (Exception e) {}
+    	}
+    	
     	// search for write with sectorNum
     	Iterator<Write> it = write_list.iterator();
     	Write temp = null;
@@ -59,6 +79,12 @@ public class Transaction{
     		write_list.add(add);
     		num_sects++;
     	}
+    	
+    	is_writing = false;
+    	CV_reading.signalAll();
+    	CV_writing.signalAll();
+    	
+    	lock.unlock();
     	return;
     }
 
@@ -71,6 +97,14 @@ public class Transaction{
     throws IllegalArgumentException, 
            IndexOutOfBoundsException
     {
+    	lock.lock();
+    	while(is_writing) {
+    		try{
+    			CV_writing.await();
+    		} catch (Exception e) {}
+    	}
+    	readers++;
+    	
     	// search list for write to secNum
     	// if found update buffer and return true
     	Iterator<Write> it = write_list.iterator();
@@ -88,9 +122,17 @@ public class Transaction{
     		for (int i = 0; i < temp.cData.length; i++) {
     			buffer[i] = temp.cData[i];
     		}
+    		readers--;
+    		CV_writing.signalAll();
+    		CV_reading.signalAll();
+        	lock.unlock();
     		return true;
     	}
     	
+    	readers--;
+		CV_writing.signalAll();
+		CV_reading.signalAll();
+    	lock.unlock();
         return false;
     }
 
@@ -98,15 +140,29 @@ public class Transaction{
     public void commit()
     throws IOException, IllegalArgumentException
     {
+    	lock.lock();
+    	if(Status == Common.ABORTED) {
+    		lock.unlock();
+    		return;
+    	}
+    	
+    	while(is_writing) {
+    		try{
+    			CV_writing.await();
+    		} catch (Exception e) {}
+    	}
     	// change status
     	Status = Common.COMMITED;
+    	lock.unlock();
     }
 
     public void abort()
     throws IOException, IllegalArgumentException
     {
+    	lock.lock();
     	// change status
-    	Status = Common.ABORTED;    	
+    	Status = Common.ABORTED;
+    	lock.unlock();
     }
 
 
@@ -149,6 +205,13 @@ public class Transaction{
          * ...
          * secNum ith update 
          */
+    	lock.lock();
+    	
+    	while(is_writing) {
+    		try {
+    			CV_writing.await();
+    		} catch (Exception e) {}
+    	}
     	
     	byte ret[] = new byte[(write_list.size() +2)*Disk.SECTOR_SIZE];
     	
@@ -171,7 +234,7 @@ public class Transaction{
     		j++;
     	}
     	
-    	
+    	lock.unlock();
         return ret;
     }
     
@@ -194,8 +257,10 @@ public class Transaction{
     // writeback is done.
     //
     public void rememberLogSectors(int start, int nSectors){
+    	lock.lock();
     	start_in_log = start;
-    	num_sects = nSectors;
+    	num_sects = nSectors+2;
+    	lock.unlock();
     }
     
     public int recallLogSectorStart(){
@@ -226,6 +291,7 @@ public class Transaction{
     // write in byte array. Used for writeback.
     //
     public int getUpdateI(int i, byte buffer[]){
+    	//lock.lock();
     	if (Status == Common.COMMITED) {
     		//go to the ith write, update buffer, return sec num
         	Write temp = write_list.get(i);
@@ -234,9 +300,30 @@ public class Transaction{
         					j < temp.cData.length; j++) {
         		buffer[j] = temp.cData[j];
         	}
+        	//lock.unlock();
         	return temp.secNum;
     	}
+    	//lock.unlock();
         return -1;
+    }
+    
+    
+    
+    public boolean getUpdateS(int sec_num, byte buffer[]) {
+    	lock.lock();
+    	if (Status == Common.COMMITED) {
+	    	Iterator<Write> iter = write_list.iterator();
+	    	Write temp;
+	    	while(iter.hasNext()) {
+	    		temp = iter.next();
+	    		if(temp.isSecNum(sec_num)) {
+	    			lock.unlock();
+	    			return temp.copyFromBuffer(sec_num, buffer);
+	    		}
+	    	}
+    	}
+    	lock.unlock();
+    	return false;
     }
     
 
@@ -315,7 +402,10 @@ public class Transaction{
      * @return - the equivalence of both id and tid
      */
     public boolean hasTranID(TransID tid) {
-    	return id.equals(tid);
+    	lock.lock();
+    	boolean res = id.equals(tid);
+    	lock.unlock();
+    	return res;
     }
     
     /**
@@ -441,7 +531,7 @@ public class Transaction{
     	t.is_equal(-1, b3[6]);
     	t.is_equal(-1, b3[7]);
     	
-    	longToByte(0x12341f2e, b3, 0);
+    	longToByte(305405742, b3, 0);
     	t.is_equal(0, b3[0]);
     	t.is_equal(0, b3[1]);
     	t.is_equal(0, b3[2]);
@@ -505,17 +595,18 @@ public class Transaction{
     	
     	
     	// getNUpdatedSectors()
+    	tran.Status = Common.IN_PROGRESS;
     	t.set_method("getNUpdatedSectors");
     	t.is_equal(tran.getNUpdatedSectors(), 0);
     	tran.commit();
-    	t.is_equal(tran.getNUpdatedSectors(), 2);
+    	t.is_equal(2, tran.getNUpdatedSectors());
     	tran.addWrite(123, b4);
-    	t.is_equal(tran.getNUpdatedSectors(), 3);
+    	t.is_equal(3, tran.getNUpdatedSectors());
     	
-    	
+
     	
     	// getUpdate()
-    	t.set_method("getUpdate()");
+    	t.set_method("getUpdateI()");
     	
     	byte b5[] = new byte[b4.length];
     	tran.getUpdateI(2, b5);
@@ -546,6 +637,7 @@ public class Transaction{
          * ...
          * secNum ith update 
          */
+    	
     	// getSectorsForLog 
     	t.set_method("getSectorsForLog()");
     	tran = new Transaction();

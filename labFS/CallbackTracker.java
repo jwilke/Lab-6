@@ -12,7 +12,7 @@
 
 import java.util.Vector;
 
-public class CallbackTracker{
+public class CallbackTracker implements DiskCallback{
 	
 	/*
 	 * List of DiskResults
@@ -20,14 +20,17 @@ public class CallbackTracker{
 	 */
 	
     public void requestDone(DiskResult result){
-        // TBD
+        // save result
+    	// broadcast
     }
 
     //
     // Wait for one tag to be done
     //
     public DiskResult waitForTag(int tag){
-        // TBD
+        // check for tag in all list
+    	// if not there wait
+    	// if there: remove for list, return result
         return null;
     }
 

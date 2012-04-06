@@ -17,6 +17,7 @@ public class ADisk{
 	 * ActiveTransactionList atl;
 	 * WriteBackList wbl
 	 * LogStatus log;
+	 * CallbackTracker cbt;
 	 */
 
   //-------------------------------------------------------
@@ -42,7 +43,7 @@ public class ADisk{
 	  // if format == true 
 	  // wipe disk, write zeros to all
 	  // else
-	  // create new disk
+	  // create new disk from log passing cbt
 	  
 	  /*
 	   * allocate:
@@ -50,6 +51,8 @@ public class ADisk{
 	   * wbl
 	   * log
 	   */
+	  
+	  // create writeback worker
   }
 
   //-------------------------------------------------------
@@ -114,11 +117,16 @@ public class ADisk{
   {
 	  // change status
 	  // ask log status where to put the log
+	  // find place in log
 	  // issue writes to log
 	  // issue barrier to log
 	  // issue commit to log
 	  // wait for log to finish getting the commit (maybe CallBackTracker)
 	  // move it from atl.remove(tid) to wbl.addCommitted()
+	  
+	  // wait for tag
+	  // remove from wbl
+	  // free in log
   }
 
 

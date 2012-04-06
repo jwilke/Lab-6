@@ -18,7 +18,10 @@ public class LogStatus{
 	 * int start
 	 * int current
 	 * int firstSecHeader = 2
+	 * 
+	 * bit map
 	 */
+	public int CURRENT_TAG = 0;
 
 	public LogStatus() {
 		// start - firstSecHeader + sec size
