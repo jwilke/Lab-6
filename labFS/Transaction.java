@@ -273,6 +273,8 @@ public class Transaction{
     // committed transaction and return it. Otherwise
     // throw an exception or return null.
     public static Transaction parseLogBytes(byte buffer[]){
+    	assert(buffer[12] == Common.COMMITED);
+    		
     	Transaction t = new Transaction();
     	t.Status = Common.COMMITED;
     	
@@ -528,6 +530,8 @@ public class Transaction{
     	for (int i = 0; i < b5.length; i++) {
     		t.is_equal(100-i, b5[i]);
     	}
+    	
+    	
     	              
     	
     	
@@ -545,13 +549,58 @@ public class Transaction{
     	// getSectorsForLog 
     	t.set_method("getSectorsForLog()");
     	tran = new Transaction();
-    	
+    	for(int i = 0; i < 100; i++) {
+    		b5[i] = (byte) i;
+    	}
+    	tran.addWrite(100, b5);
+    	tran.addWrite(101, b5);
+    	tran.addWrite(102, b5);
+    	tran.addWrite(103, b5);
+    	tran.commit();
+    	// test TransID
+    	b5 = tran.getSectorsForLog();
+    	b1 = new byte[8];
+    	tran.longToByte(tran.id.getTranNum(), b1, 0);
+    	for(int i = 0; i < b1.length; i++) {
+    		t.is_equal(b1[i], b5[i], "TransID");
+    	}
+    	// test number of updates
+    	b1 = new byte[4];
+    	tran.intToByte(4, b1, 0);
+    	for(int i = 0; i < b1.length; i++) {
+    		t.is_equal(b1[i], b5[i+8], "number of updates");
+    	}
+    	// test Status
+    	t.is_equal(Common.COMMITED, b5[12], "Status");
+    	int size = 4;
+    	for(int i = 0; i < size; i++) {
+    		for (int j = 0; j < 100; j++) {
+    			t.is_equal(j, b5[(i+1)*512 + j]);
+    		}
+        	tran.intToByte(100+i, b1, 0);
+        	for(int j = 0; j < 4; j++) {
+        		t.is_equal(b1[j], b5[OFFSET + (i*4) +j]);
+        	}
+    	}
     	
     	
     	
     	
     	// parseHeader()
+    	t.set_method("parseHeader()");
+    	t.is_equal(4, Transaction.parseHeader(b5));
+    	
+    	
+    	
+    	
+    	
     	// parseLogBytes()
+    	t.set_method("ParseLogBytes()");
+    	Transaction tran2 = Transaction.parseLogBytes(b5);
+    	t.is_equal(4, tran2.num_sects);
+    	t.is_equal(-1, tran2.start_in_log);
+    	t.is_equal(Common.COMMITED, tran2.Status);
+    	t.is_equal(4, tran2.write_list.size());
     	
     	
     	
