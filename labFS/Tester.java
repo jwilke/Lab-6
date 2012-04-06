@@ -348,8 +348,30 @@ public class Tester {
 
 	public boolean is_equal(String s1, String s2, String n) {
 		test++;
-		if (s1 != s2) {
+		if (!((s1 == null && s2 == null) || (s1 != null && s1.equals(s2)))) {
 			print_fail("String", s1, s2, n);
+			failed++;
+			return false;
+		} else {
+			return true;
+		}
+	}
+	
+	public boolean is_equal(Object o1, Object o2) {
+		test++;
+		if (!((o1 == null && o2 == null) || (o1 != null && o1.equals(o2)))) {
+			print_fail(o1.getClass().toString(), o1.toString(), o2.toString());
+			failed++;
+			return false;
+		} else {
+			return true;
+		}
+	}
+
+	public boolean is_equal(Object o1, Object o2, String n) {
+		test++;
+		if (!((o1 == null && o2 == null) || (o1 != null && o1.equals(o2)))) {
+			print_fail(o1.getClass().toString(), o1.toString(), o2.toString(), n);
 			failed++;
 			return false;
 		} else {

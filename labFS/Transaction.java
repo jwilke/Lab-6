@@ -10,26 +10,19 @@
  *
  */
 import java.io.IOException;
-import java.util.Arrays;
+//import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 
 public class Transaction{
 	
-	/*
-	 * TransID id;
-	 * List Writes
-	 * Status (COMMITTED, IN_PROGRESS, ABORTED)
-	 * int start_in_log;
-	 * int num_sects
-	 */
-
+	private static final int OFFSET = 40;
 	
-	TransID id;
-	LinkedList<Write> write_list;
-	byte Status;
-	int start_in_log;
-	int num_sects;
+	private TransID id;
+	private LinkedList<Write> write_list;
+	private byte Status;
+	private int start_in_log;
+	private int num_sects;
 	
 	public Transaction() {
 		id = new TransID();
@@ -145,8 +138,19 @@ public class Transaction{
     	} else {
     		ah = 0;
     	}*/
+    	/*
+         * Header
+         * TranID number
+         * number of updates
+         * Status - written to disk or not
+         *   
+         * 40th byte - secNum first update
+         * secNum second update
+         * ...
+         * secNum ith update 
+         */
     	
-    	byte ret[] = new byte[(write_list.size() +2)*512];
+    	byte ret[] = new byte[(write_list.size() +2)*Disk.SECTOR_SIZE];
     	
     	longToByte(id.getTranNum(),ret,0);
     	
@@ -160,9 +164,9 @@ public class Transaction{
     	int j = 0;
     	while(it.hasNext()) {
     		temp = it.next();
-    		intToByte(temp.secNum,ret,40+j*4);
-    		for(int k = 0; k < 512; k++) {
-    			ret[(j+1) * 512 + k] = temp.cData[k]; 
+    		intToByte(temp.secNum,ret,OFFSET+j*4);
+    		for(int k = 0; k < Disk.SECTOR_SIZE && k < temp.cData.length; k++) {
+    			ret[(j+1) * Disk.SECTOR_SIZE + k] = temp.cData[k]; 
     		}
     		j++;
     	}
@@ -193,6 +197,7 @@ public class Transaction{
     	start_in_log = start;
     	num_sects = nSectors;
     }
+    
     public int recallLogSectorStart(){
     	return start_in_log;
     }
@@ -208,6 +213,8 @@ public class Transaction{
     // transaction updates. Used for writeback.
     //
     public int getNUpdatedSectors(){
+    	if(Status != Common.COMMITED)
+    		return 0;
     	return write_list.size();
     }
 
@@ -222,7 +229,9 @@ public class Transaction{
     	if (Status == Common.COMMITED) {
     		//go to the ith write, update buffer, return sec num
         	Write temp = write_list.get(i);
-        	for(int j = 0; j < 512; j++) {
+        	for(int j = 0; 	j < Disk.SECTOR_SIZE && 
+        					j < buffer.length &&
+        					j < temp.cData.length; j++) {
         		buffer[j] = temp.cData[j];
         	}
         	return temp.secNum;
@@ -271,14 +280,287 @@ public class Transaction{
     	int num = parseHeader(buffer);
     	int j = 0;
     	for(int i = 0; i < num; i++) {
-    		j = (((int)buffer[40+i]) << 24) | (((int)buffer[41+i]) << 16) | (((int)buffer[42+i]) << 8) | ((int)buffer[43+i]);
-    		t.addWrite(j, Arrays.copyOfRange(buffer, (i+1)*512, (i+2)*512));
+    		j = (((int)buffer[OFFSET+i]) << 24) | (((int)buffer[OFFSET+1+i]) << 16) | (((int)buffer[OFFSET+2+i]) << 8) | ((int)buffer[OFFSET+3+i]);
+    		t.addWrite(j, copyOfRange(buffer, (i+1)*Disk.SECTOR_SIZE, (i+2)*Disk.SECTOR_SIZE));
     		j = 0;
     	}
     	
         return t;
     }
     
+    /**
+     * Copy the range of a the input at a range from 
+     * start to end
+     */
+    public static byte[] copyOfRange(byte[] input, int start, int end) {
+    	byte[] output = new byte[end-start];
+    	for (int i = start; i < end && i < input.length; i++) {
+    		output[i-start] = input[i];
+    	}
+    	return output;
+    }
+    
+    /**
+     * Get the hashCode of the transaction
+     */
+    public int hashCode() {
+    	return (int) id.getTranNum();
+    }
+    
+    /**
+     * returns whether this transaction has the given TransID
+     * @param tid - the TransID in questions
+     * @return - the equivalence of both id and tid
+     */
+    public boolean hasTranID(TransID tid) {
+    	return id.equals(tid);
+    }
+    
+    /**
+     * Unit tests for Transaction
+     * @throws IllegalArgumentException
+     * @throws IOException
+     */
+    public void unit() throws IllegalArgumentException, IOException {
+    	Tester t = new Tester();
+    	t.set_object("Transaction");
+    	Transaction tran = new Transaction();
+    	
+    	//test constructor
+    	t.set_method("Transaction()");
+    	t.is_equal(5, tran.id.getTranNum(), "TranID");
+    	t.is_equal(tran.write_list.size(), 0, "write_list");
+    	t.is_equal(tran.Status, Common.IN_PROGRESS, "Status");
+    	t.is_equal(tran.start_in_log, -1, "start_in_log");
+    	t.is_equal(tran.num_sects, 0, "num_sects");
+    	
+    	
+    	
+    	
+    	// test addWrite()
+    	t.set_method("addWrite()");
+    	int sn1 = 1;
+    	byte[] b1 = new byte[5];
+    	for (byte i = 0; i < 5; i++)
+    		b1[i] = i;
+    	tran.addWrite(sn1, b1);
+    	t.is_equal(tran.write_list.get(0), new Write(sn1, b1));
+    	t.is_equal(1, tran.write_list.size(), "num writes");
+    	
+    	
+    	sn1 = 1;
+    	b1 = new byte[5];
+    	for (byte i = 0; i < 5; i++) {
+    		b1[i] = (byte) (i+1);
+    		//System.out.println(b1[i]);
+    	}
+    	tran.addWrite(sn1, b1);
+    	t.is_equal(tran.write_list.get(0), new Write(sn1, b1));
+    	t.is_equal(1, tran.write_list.size(), "num writes");
+    	
+    	
+    	int sn2 = 2;
+    	byte[] b2 = new byte[5];
+    	for (byte i = 0; i < 5; i++)
+    		b2[i] = (byte) (i+2);
+    	tran.addWrite(sn2, b2);
+    	t.is_equal(tran.write_list.get(0), new Write(sn1, b1));
+    	t.is_equal(tran.write_list.get(1), new Write(sn2, b2));
+    	
+    	
+    	
+    	
+    	// checkRead(secNum, byte[])
+    	t.set_method("checkRead(int, byte[])");
+    	byte[] b3 = new byte[5];
+    	t.is_true(tran.checkRead(sn1,b3));
+    	for (int i = 0; i<b3.length; i++)
+    		t.is_equal(i+1, b3[i]);
+    	
+    	b3 = new byte[5];
+    	t.is_true(tran.checkRead(sn2,b3));
+    	for (int i = 0; i<b3.length; i++)
+    		t.is_equal(i+2, b3[i]);
+    	
+    	t.is_true(!tran.checkRead(45, b3));
+    	
+    	
+    	//test commit
+    	t.set_method("commit()");
+    	tran.commit();
+    	t.is_equal(Common.COMMITED, tran.Status, "Status");
+    	
+    	//test abort
+    	t.set_method("abort()");
+    	tran.abort();
+    	t.is_equal(Common.ABORTED, tran.Status, "Status");
+    	
+    	// int to byte
+    	t.set_method("intToByte(int, byte[], int");
+    	intToByte(1, b3, 0);
+    	t.is_equal(0, b3[0]);
+    	t.is_equal(0, b3[1]);
+    	t.is_equal(0, b3[2]);
+    	t.is_equal(1, b3[3]);
+    	
+    	intToByte(-1, b3, 0);
+    	t.is_equal(-1, b3[0]);
+    	t.is_equal(-1, b3[1]);
+    	t.is_equal(-1, b3[2]);
+    	t.is_equal(-1, b3[3]);
+    	
+    	intToByte(0x1f233a11, b3, 0);
+    	t.is_equal(0x1f, b3[0]);
+    	t.is_equal(0x23, b3[1]);
+    	t.is_equal(0x3a, b3[2]);
+    	t.is_equal(0x11, b3[3]);
+    	
+    	
+    	// long to byte
+    	t.set_method("longToByte(long, byte[], int");
+    	b3 = new byte[8];
+    	longToByte(1, b3, 0);
+    	t.is_equal(0, b3[0]);
+    	t.is_equal(0, b3[1]);
+    	t.is_equal(0, b3[2]);
+    	t.is_equal(0, b3[3]);
+    	t.is_equal(0, b3[4]);
+    	t.is_equal(0, b3[5]);
+    	t.is_equal(0, b3[6]);
+    	t.is_equal(1, b3[7]);
+    	
+    	longToByte(-1, b3, 0);
+    	t.is_equal(-1, b3[0]);
+    	t.is_equal(-1, b3[1]);
+    	t.is_equal(-1, b3[2]);
+    	t.is_equal(-1, b3[3]);
+    	t.is_equal(-1, b3[4]);
+    	t.is_equal(-1, b3[5]);
+    	t.is_equal(-1, b3[6]);
+    	t.is_equal(-1, b3[7]);
+    	
+    	longToByte(0x12341f2e, b3, 0);
+    	t.is_equal(0, b3[0]);
+    	t.is_equal(0, b3[1]);
+    	t.is_equal(0, b3[2]);
+    	t.is_equal(0, b3[3]);
+    	t.is_equal(0x12, b3[4]);
+    	t.is_equal(0x34, b3[5]);
+    	t.is_equal(0x1f, b3[6]);
+    	t.is_equal(0x2e, b3[7]);
+    	
+    	
+    	// rememberLogSectors
+    	t.set_method("rememberLogSectors");
+    	tran.rememberLogSectors(2, 100);
+    	t.is_equal(2, tran.start_in_log);
+    	t.is_equal(100, tran.num_sects);
+    	
+    	tran.rememberLogSectors(9836, 512);
+    	t.is_equal(9836, tran.start_in_log);
+    	t.is_equal(512, tran.num_sects);
+    	
+    	tran.rememberLogSectors(1, 1);
+    	t.is_equal(1, tran.start_in_log);
+    	t.is_equal(1, tran.num_sects);
+    	
+    	
+    	
+    	// recallLogSectorStart()
+    	t.set_method("recallLogSectorStart()");
+    	tran.rememberLogSectors(2, 100);
+    	t.is_equal(2, tran.recallLogSectorStart());
+    	
+    	tran.rememberLogSectors(980986, 100);
+    	t.is_equal(980986, tran.recallLogSectorStart());
+    	
+    	tran.rememberLogSectors(34, 100);
+    	t.is_equal(34, tran.recallLogSectorStart());
+    	
+    	
+    	// recallLogSectorsNSectors()
+    	t.set_method("recallLogSectorsNSectors()");
+    	tran.rememberLogSectors(2, 100);
+    	t.is_equal(100, tran.recallLogSectorNSectors());
+    	
+    	tran.rememberLogSectors(2, 512);
+    	t.is_equal(512, tran.recallLogSectorNSectors());
+    	
+    	tran.rememberLogSectors(2, 10123);
+    	t.is_equal(10123, tran.recallLogSectorNSectors());
+    	
+    	
+    	
+    	// copyOfRange()
+    	t.set_method("copyOfRange");
+    	b3 = new byte[10];
+    	for(int i = 0; i < b3.length; i++)
+    		b3[i] = (byte) i;
+    	byte b4[] = copyOfRange(b3, 2, 5);
+    	for(int i = 0; i < b4.length; i++)
+    		t.is_equal(b4[i], i+2);
+    	
+    	
+    	
+    	// getNUpdatedSectors()
+    	t.set_method("getNUpdatedSectors");
+    	t.is_equal(tran.getNUpdatedSectors(), 0);
+    	tran.commit();
+    	t.is_equal(tran.getNUpdatedSectors(), 2);
+    	tran.addWrite(123, b4);
+    	t.is_equal(tran.getNUpdatedSectors(), 3);
+    	
+    	
+    	
+    	// getUpdate()
+    	t.set_method("getUpdate()");
+    	
+    	byte b5[] = new byte[b4.length];
+    	tran.getUpdateI(2, b5);
+    	for(int i = 0; i < b5.length; i++)
+    		t.is_equal(i+2, b5[i]);
+    	b4 = new byte[100];
+    	for(int i = 0; i< b4.length; i++)
+    		b4[i] = (byte) (100-i);
+    	tran.addWrite(321, b4);
+    	b5 = new byte[b4.length];
+    	tran.getUpdateI(3, b5);
+    	for (int i = 0; i < b5.length; i++) {
+    		t.is_equal(100-i, b5[i]);
+    	}
+    	              
+    	
+    	
+    	/*
+         * Header
+         * TranID number
+         * number of updates
+         * Status - written to disk or not
+         *   
+         * 40th byte - secNum first update
+         * secNum second update
+         * ...
+         * secNum ith update 
+         */
+    	// getSectorsForLog 
+    	t.set_method("getSectorsForLog()");
+    	tran = new Transaction();
+    	
+    	
+    	
+    	
+    	
+    	// parseHeader()
+    	// parseLogBytes()
+    	
+    	
+    	
+    	
+    	
+    	
+    	
+    	t.close();
+    }
     
 }
 

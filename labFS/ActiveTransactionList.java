@@ -1,3 +1,6 @@
+import java.util.ArrayList;
+import java.util.Iterator;
+
 /*
  * ActiveTransaction.java
  *
@@ -16,9 +19,12 @@ public class ActiveTransactionList{
 	 * LinkedList trans
 	 * SimpleLock
 	 */
+	private ArrayList<Transaction> list;
+	SimpleLock lock;
 	
 	public ActiveTransactionList() {
-		// create empty list of Transactions
+		list = new ArrayList<Transaction>();
+		SimpleLock lock = new SimpleLock();
 	}
 
     /*
@@ -26,26 +32,53 @@ public class ActiveTransactionList{
      */
 
     public void put(Transaction trans){
-    	// lock.lock();
-    	// add to list
-        System.exit(-1); // TBD
+    	// lock
+    	lock.lock();
+    	
+    	// add transaction to list
+    	list.add(trans);
+    	
+    	lock.unlock();
     }
 
     public Transaction get(TransID tid){
     	// lock.lock();
+    	lock.lock();
+    	
     	// search list
-    	// if found return transaction
+    	Iterator<Transaction> it = list.iterator();
+    	while(it.hasNext()) {
+    		Transaction temp = it.next();
+    		if(temp.hasTranID(tid)) {
+    			// if found return transaction
+    			lock.unlock();
+    			return temp;
+    		}
+    	}
+    	
     	// else return null
-        System.exit(-1); // TBD
+    	lock.unlock();
         return null;
     }
 
     public Transaction remove(TransID tid){
     	// lock.lock();
+    	lock.lock();
+    	
     	// search list
-    	// if found delete and return transaction
+    	Iterator<Transaction> it = list.iterator();
+    	while(it.hasNext()) {
+    		Transaction temp = it.next();
+    		if(temp.hasTranID(tid)) {
+    			// if found delete and return transaction
+    			it.remove();
+    			lock.unlock();
+    			return temp;
+    		}
+    	}
+
     	// else return null
-        System.exit(-1); // TBD
+        lock.unlock();
         return null;
     }
 
