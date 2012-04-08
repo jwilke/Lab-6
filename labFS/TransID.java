@@ -42,8 +42,11 @@ public class TransID{
 	  return tranNum;
   }
   
-  public void unit() {
-  	Tester t = new Tester();
+  public String toString() {
+	  return "TransID: " + tranNum;
+  }
+  
+  public void unit(Tester t) {
   	t.set_object("TransID");
   	
   	// test constructor
@@ -80,6 +83,5 @@ public class TransID{
   	t.is_true(id3.equals(o));
   	
   	
-  	t.close();
   }
 }

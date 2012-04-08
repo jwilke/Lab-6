@@ -58,25 +58,7 @@ public class DiskUnit implements DiskCallback{
     testReads(false, -1);    
     System.out.println("Read data from some");
     System.exit(0);*/
-		System.out.println("Testing TranID");
-		TransID id = new TransID();
-		id.unit();
-
-		System.out.println("\nTesting Write");
-		Write w = new Write(0, new byte[0]);
-		w.unit();
-
-		System.out.println("\nTesting Transaction");
-		Transaction t = new Transaction();
-		try {
-			t.unit();
-		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		
 	}
 
 

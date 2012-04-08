@@ -27,7 +27,17 @@ public class Common{
   public static final int IN_PROGRESS = 0;
   public static final int ABORTED = -1;
   
+  public static void intToByte(int src, byte dest[], int offset) {
+  	for(int i = 0; i < 4; i++) {
+  		dest[offset+3-i] = (byte) (src >>> (i*8));
+  	}
+  }
   
+  public static void longToByte(long src, byte dest[], int offset) {
+  	for(int i = 0; i < 8; i++) {
+  		dest[offset+7-i] = (byte) (src >>> (i*8));
+  	}
+  }
   
 }
 
@@ -98,8 +108,7 @@ class Write{
 		return output;
 	}
 
-	public void unit() {
-		Tester t = new Tester();
+	public void unit(Tester t) {
 		t.set_object("Write");
 		Write w1;
 		int sn1;
@@ -179,11 +188,6 @@ class Write{
 		t.is_true(!w1.equals(w2));
 		
 		
-		
-		
-		
-		
-		t.close();
 		
 	}
 }

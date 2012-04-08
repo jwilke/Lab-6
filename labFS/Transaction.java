@@ -10,13 +10,14 @@
  *
  */
 import java.io.IOException;
+import java.io.Serializable;
 //import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.locks.Condition;
 
-public class Transaction{
-	
+public class Transaction implements Serializable{
+
 	private static final int OFFSET = 40;
 	
 	private TransID id;
@@ -409,12 +410,19 @@ public class Transaction{
     }
     
     /**
+     * Get the TransID assigned to this Transaction
+     * @return - return TransID
+     */
+    public TransID getTransID() {
+		return id;
+	}
+    
+    /**
      * Unit tests for Transaction
      * @throws IllegalArgumentException
      * @throws IOException
      */
-    public void unit() throws IllegalArgumentException, IOException {
-    	Tester t = new Tester();
+    public void unit(Tester t) throws IllegalArgumentException, IOException {
     	t.set_object("Transaction");
     	Transaction tran = new Transaction();
     	
@@ -546,15 +554,15 @@ public class Transaction{
     	t.set_method("rememberLogSectors");
     	tran.rememberLogSectors(2, 100);
     	t.is_equal(2, tran.start_in_log);
-    	t.is_equal(100, tran.num_sects);
+    	t.is_equal(102, tran.num_sects);
     	
     	tran.rememberLogSectors(9836, 512);
     	t.is_equal(9836, tran.start_in_log);
-    	t.is_equal(512, tran.num_sects);
+    	t.is_equal(514, tran.num_sects);
     	
     	tran.rememberLogSectors(1, 1);
     	t.is_equal(1, tran.start_in_log);
-    	t.is_equal(1, tran.num_sects);
+    	t.is_equal(3, tran.num_sects);
     	
     	
     	
@@ -573,13 +581,13 @@ public class Transaction{
     	// recallLogSectorsNSectors()
     	t.set_method("recallLogSectorsNSectors()");
     	tran.rememberLogSectors(2, 100);
-    	t.is_equal(100, tran.recallLogSectorNSectors());
+    	t.is_equal(102, tran.recallLogSectorNSectors());
     	
     	tran.rememberLogSectors(2, 512);
-    	t.is_equal(512, tran.recallLogSectorNSectors());
+    	t.is_equal(514, tran.recallLogSectorNSectors());
     	
     	tran.rememberLogSectors(2, 10123);
-    	t.is_equal(10123, tran.recallLogSectorNSectors());
+    	t.is_equal(10125, tran.recallLogSectorNSectors());
     	
     	
     	
@@ -622,6 +630,8 @@ public class Transaction{
     		t.is_equal(100-i, b5[i]);
     	}
     	
+    	// getTransID
+    	// TODO
     	
     	              
     	
@@ -696,12 +706,9 @@ public class Transaction{
     	
     	
     	
-    	
-    	
-    	
-    	
-    	t.close();
     }
+
+	
     
 }
 

@@ -378,6 +378,85 @@ public class Tester {
 			return true;
 		}
 	}
+	
+	
+	/**
+	 * Test two arrays are equal
+	 * @param i1
+	 * @param i2
+	 * @param n
+	 * @return
+	 */
+	public boolean is_equal(int[] i1, int[] i2, String n) {
+		test++;
+		if(i1.length != i2.length) {
+			print_fail("int[]", i1.toString(), i2.toString(), n + ": size");
+			return false;
+		} else {
+			for (int i = 0; i < i1.length; i++) {
+				if (i1[i] != i2[i]) {
+					print_fail("int[]", i1.toString(), i2.toString(), n + ": Array[" + i + "]");
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	public boolean is_equal(int[] i1, int[] i2) {
+		test++;
+		if(i1.length != i2.length) {
+			print_fail("int[]", i1.toString(), i2.toString());
+			return false;
+		} else {
+			for (int i = 0; i < i1.length; i++) {
+				if (i1[i] != i2[i]) {
+					print_fail("int[]", i1.toString(), i2.toString());
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * Test two arrays are equal
+	 * @param b1
+	 * @param b2
+	 * @param n
+	 * @return
+	 */
+	public boolean is_equal(byte[] b1, byte[] b2, String n) {
+		test++;
+		if(b1.length != b2.length) {
+			print_fail("int[]", b1.toString(), b2.toString(), n + ": size");
+			return false;
+		} else {
+			for (int i = 0; i < b1.length; i++) {
+				if (b1[i] != b2[i]) {
+					print_fail("int[]", b1.toString(), b2.toString(), n + ": Array[" + i + "]");
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	public boolean is_equal(byte[] b1, byte[] b2) {
+		test++;
+		if(b1.length != b2.length) {
+			print_fail("int[]", b1.toString(), b2.toString());
+			return false;
+		} else {
+			for (int i = 0; i < b1.length; i++) {
+				if (b1[i] != b2[i]) {
+					print_fail("int[]", b1.toString(), b2.toString());
+					return false;
+				}
+			}
+		}
+		return true;
+	}
 
 	/**
 	 * checks if the passed bool is true
