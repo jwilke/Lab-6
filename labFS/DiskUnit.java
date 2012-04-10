@@ -81,6 +81,9 @@ public class DiskUnit implements DiskCallback{
 		System.out.println("Testing LogStatus");
 		LogStatus.unit(t);
 		
+		System.out.println("Testing CallbackTracker");
+		CallbackTracker.unit(t);
+		
 		System.out.println();
 		t.close();
 		

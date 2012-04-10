@@ -10,6 +10,8 @@
  *
  */
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -131,5 +133,21 @@ public class CallbackTracker implements DiskCallback{
     		}
     	}
     	lock.unlock();
+    }
+    
+    public static void unit(Tester t) throws IllegalArgumentException, IOException {
+    	t.set_object("CallbackTracker");
+    	CallbackTracker cbt1 = new CallbackTracker();
+    	Disk d1 = new Disk(cbt1);
+    	
+    	// request done
+    	t.set_method("requestDone()");
+    	int tag = 33;
+    	byte[] buffer1 = new byte[Disk.SECTOR_SIZE];
+    	//d1.startRequest(Disk.READ, tag, 2000, buffer1);
+    	DiskResult dr1 = new DiskResult(Disk.READ, tag, 2000, buffer1);
+    	cbt1.requestDone(dr1);
+    	t.is_true(cbt1.list.containsKey(tag)); 
+    	
     }
 }
