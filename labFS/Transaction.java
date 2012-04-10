@@ -18,7 +18,7 @@ import java.util.concurrent.locks.Condition;
 
 public class Transaction implements Serializable{
 
-	private static final int OFFSET = 40;
+	public static final int OFFSET = 40;
 	
 	private TransID id;
 	private LinkedList<Write> write_list;
