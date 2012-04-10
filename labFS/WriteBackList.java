@@ -166,7 +166,7 @@ public class WriteBackList{
     	for (int i = 0; i < b2.length; i++) {
     		b2[i] = (byte) (off + i);
     	}
-    	tran2.addWrite(1, b2);
+    	tran2.addWrite(2, b2);
     	tran2.commit();
     	
     	Transaction tran3 = new Transaction();
@@ -176,7 +176,7 @@ public class WriteBackList{
     	for (int i = 0; i < b3.length; i++) {
     		b3[i] = (byte) (off + i);
     	}
-    	tran3.addWrite(1, b3);
+    	tran3.addWrite(3, b3);
     	tran3.commit();
     	
     	wbl1.addCommitted(tran1);
@@ -224,6 +224,13 @@ public class WriteBackList{
     	t.is_equal(tran3, wbl1.removeNextWriteback());
     	t.is_equal(0, wbl1.list.size());
     	
+    }
+    
+    public static void printArray(byte[] b) {
+    	System.out.print("[");
+    	for (int i = 0; i < b.length-1; i++)
+    		System.out.print(b[i] + ", ");
+    	System.out.println(b[b.length-1] + "]");
     }
     
 }

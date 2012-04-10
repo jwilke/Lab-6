@@ -1,3 +1,4 @@
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.locks.Condition;
 
@@ -225,7 +226,7 @@ public class LogStatus{
 			disk.startRequest(Disk.READ, tag, HEADER_LOC, buffer);
 		} catch (Exception e) {}
 		
-		cbt.waitForTag(tag);
+		if(cbt != null) cbt.waitForTag(tag);
 		return Common.byteToInt(buffer, 0);
 	}
 	
@@ -237,7 +238,7 @@ public class LogStatus{
 			disk.startRequest(Disk.READ, tag, HEADER_LOC, buffer);
 		} catch (Exception e) {}
 		
-		cbt.waitForTag(tag);
+		if(cbt != null) cbt.waitForTag(tag);
 		return Common.byteToInt(buffer, 4);
 	}
 
@@ -252,9 +253,7 @@ public class LogStatus{
 		Common.intToByte(start, header, 0);
 		Common.intToByte(current, header, 4);
 		disk.startRequest(Disk.WRITE, tag, HEADER_LOC, header);
-		lock.unlock();
 		cbt.waitForTag(tag);
-		lock.lock();
 		// send commit to disk
 		byte[] commit = new byte[Disk.SECTOR_SIZE];
 		commit[0] = (byte) 'c';
@@ -265,16 +264,21 @@ public class LogStatus{
 		commit[5] = (byte) 't';
 		tag = CURRENT_TAG++;
 		disk.startRequest(Disk.WRITE, tag, location, commit);
-		lock.unlock();
+
 		cbt.waitForTag(tag);
+		disk.addBarrier();
+		lock.unlock();
 	}
 
-	public static void unit(Tester t) {
+	public static void unit(Tester t) throws IllegalArgumentException, IOException {
 		t.set_object("LogStatus");
 
 
 		// Constructor
 		t.set_method("Constructor()");
+		Disk d = new Disk(new CallbackTracker());
+		byte[] buffer = new byte[Disk.SECTOR_SIZE];
+		d.startRequest(Disk.WRITE, 397, Common.ADISK_REDO_LOG_SECTORS, buffer);
 		LogStatus ls1= new LogStatus(null, null, null);
 		t.is_equal(0, ls1.start, "start");
 		t.is_equal(0, ls1.current, "current");
@@ -437,7 +441,7 @@ public class LogStatus{
 		
 		
 		
-		
+		/*
 		// logStartPoint
 		t.set_method("logStartPoint()");
 		ls1.recoverySectorsInUse(234, 700);
@@ -448,7 +452,7 @@ public class LogStatus{
 		t.is_equal(923, ls1.logStartPoint(), "start");
 		ls1.recoverySectorsInUse(950, 100);
 		t.is_equal(950, ls1.logStartPoint(), "start");
-		
+		*/
 		// logCurrent
 		t.set_method("logStartPoint()");
 		ls1.recoverySectorsInUse(234, 700);

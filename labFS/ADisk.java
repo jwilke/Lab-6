@@ -7,7 +7,9 @@
  * (C) 2007, 2010 Mike Dahlin
  *
  */
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Vector;
 
 public class ADisk{
 	/*
@@ -19,6 +21,12 @@ public class ADisk{
 	 * LogStatus log;
 	 * CallbackTracker cbt;
 	 */
+	
+	Disk disk;
+	ActiveTransactionList atl;
+	WriteBackList wbl;
+	LogStatus log;
+	CallbackTracker cbt;
 
   //-------------------------------------------------------
   // The size of the redo log in sectors
@@ -40,17 +48,35 @@ public class ADisk{
   //-------------------------------------------------------
   public ADisk(boolean format)
   {
-	  // if format == true 
-	  // wipe disk, write zeros to all
+	  atl = new ActiveTransactionList();
+	  wbl = new WriteBackList();
+	  cbt = new CallbackTracker();
+	  try {
+		disk = new Disk(cbt);
+	} catch (FileNotFoundException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	byte[] formatbuffer = new byte[Disk.SECTOR_SIZE];
+	if(format) {
+		Vector<Integer> tags = new Vector<Integer>();
+		for(int i = 0; i < disk.NUM_OF_SECTORS; i++) {
+			tags.add(i);
+			try {
+				disk.startRequest(Disk.WRITE, i, i, formatbuffer);
+			} catch (IllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		cbt.waitForTags(tags);
+	}
+	log = new LogStatus(disk, cbt, wbl);
 	  // else
 	  // create new disk from log passing cbt
-	  
-	  /*
-	   * allocate:
-	   * atl
-	   * wbl
-	   * log
-	   */
 	  
 	  // create writeback worker
   }

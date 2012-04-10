@@ -78,11 +78,13 @@ public class DiskUnit implements DiskCallback{
 		System.out.println("Testing WrtieBackList");
 		WriteBackList.unit(t);
 		
-		//System.out.println("Testing LogStatus");
-		//LogStatus.unit(t);
+		System.out.println("Testing LogStatus");
+		LogStatus.unit(t);
 		
 		System.out.println();
 		t.close();
+		
+		ADisk ad = new ADisk(true);
 	}
 
 

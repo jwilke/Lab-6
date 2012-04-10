@@ -46,7 +46,7 @@ public class CallbackTracker implements DiskCallback{
         // save result
     	list.put(result.getTag(), result);
     	// broadcast
-    	tagBroadcaster.notifyAll();
+    	tagBroadcaster.signalAll();
     	
     	
     	lock.unlock();
