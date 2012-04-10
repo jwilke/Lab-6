@@ -69,6 +69,7 @@ public class CallbackTracker implements DiskCallback{
     	
     	DiskResult ret = list.get(tag);
     	// if there: remove for list, return result
+    	list.remove(tag);
     	lock.unlock();
         return ret;
     }
@@ -92,6 +93,7 @@ public class CallbackTracker implements DiskCallback{
     			}
         	}
     		ret.add(list.get(ctag));
+    		list.remove(ctag);
     	}
     	lock.unlock();
         return ret;
@@ -105,15 +107,28 @@ public class CallbackTracker implements DiskCallback{
     //
     public void dontWaitForTag(int tag){
     	lock.lock();
-    	dontWaits.add(tag);
+    	
+    	if(list.containsKey(tag)) { //if it's already in the list, remove it.
+    		list.remove(tag);
+    		lock.unlock();
+    		return;
+    	}
+    	
+    	dontWaits.add(tag); //add tag to a list of tags not to be waited for in the future
     	lock.unlock();
     }
 
     public void dontWaitForTags(Vector<Integer> tags){
     	lock.lock();
     	Iterator<Integer> iter = tags.iterator();
+    	int ctag;
     	while(iter.hasNext()) {
-    		dontWaits.add(iter.next());
+    		ctag = iter.next();
+    		if(list.containsKey(ctag)) {
+    			list.remove(ctag);		//if it's already in the list, remove it.
+    		} else {
+    			dontWaits.add(iter.next()); //add tag to a list of tags not to be waited for in the future
+    		}
     	}
     	lock.unlock();
     }
