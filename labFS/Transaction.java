@@ -260,7 +260,7 @@ public class Transaction implements Serializable{
     public void rememberLogSectors(int start, int nSectors){
     	lock.lock();
     	start_in_log = start;
-    	num_sects = nSectors+2;
+    	num_sects = nSectors+1;
     	lock.unlock();
     }
     

@@ -34,7 +34,7 @@ public class LogStatus{
 	private Disk disk;
 	private CallbackTracker cbt;
 
-	public int CURRENT_TAG = 0;
+	public static int CURRENT_TAG = 0;
 	private final int START_LOG = 0;
 	private final int HEADER_LOC = Common.ADISK_REDO_LOG_SECTORS;
 	private final int START_OFFSET = 10;
@@ -452,7 +452,7 @@ public class LogStatus{
 		t.is_equal(923, ls1.logStartPoint(), "start");
 		ls1.recoverySectorsInUse(950, 100);
 		t.is_equal(950, ls1.logStartPoint(), "start");
-		*/
+		
 		// logCurrent
 		t.set_method("logStartPoint()");
 		ls1.recoverySectorsInUse(234, 700);
@@ -463,7 +463,7 @@ public class LogStatus{
 		t.is_equal(1023, ls1.logCurrent(), "current");
 		ls1.recoverySectorsInUse(950, 100);
 		t.is_equal(26, ls1.logCurrent(), "current");
-		
+		*/
 		
 		
 		// writeCommit TODO

@@ -62,6 +62,7 @@ public class Disk{
     this.failureCountDown = -1;
 
     dw = new DiskWorker(this, file, callback);
+    
     dw.start();
   }
 
@@ -92,6 +93,7 @@ public class Disk{
   public void startRequest(int operation, int tag, int sectorNum, byte b[])
     throws IllegalArgumentException, IOException
   {
+	  
     DiskResult dr;
     try{
       lock.lock();
@@ -119,6 +121,8 @@ public class Disk{
       lock.unlock();
     }
   }
+  
+  
 
     //
     // Put a BARRIER marker onto queue. 
