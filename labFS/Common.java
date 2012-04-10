@@ -39,6 +39,10 @@ public class Common{
   	}
   }
   
+  public static int byteToInt(byte buffer[], int offset) {
+	  return (((int)buffer[offset]) << 24) | (((int)buffer[offset+1]) << 16) | (((int)buffer[offset+2]) << 8) | ((int)buffer[offset+3]);
+  }
+  
 }
 
 class Write{
