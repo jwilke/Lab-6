@@ -39,7 +39,7 @@ public class CallbackTracker implements DiskCallback{
     	lock.lock();
     	
     	if(dontWaits.contains(result.getTag())) {
-    		dontWaits.remove(result.getTag());
+    		dontWaits.remove(dontWaits.indexOf(result.getTag()));
     		lock.unlock();
     		return;
     	}
@@ -129,7 +129,7 @@ public class CallbackTracker implements DiskCallback{
     		if(list.containsKey(ctag)) {
     			list.remove(ctag);		//if it's already in the list, remove it.
     		} else {
-    			dontWaits.add(iter.next()); //add tag to a list of tags not to be waited for in the future
+    			dontWaits.add(ctag); //add tag to a list of tags not to be waited for in the future
     		}
     	}
     	lock.unlock();
@@ -144,10 +144,131 @@ public class CallbackTracker implements DiskCallback{
     	t.set_method("requestDone()");
     	int tag = 33;
     	byte[] buffer1 = new byte[Disk.SECTOR_SIZE];
-    	//d1.startRequest(Disk.READ, tag, 2000, buffer1);
     	DiskResult dr1 = new DiskResult(Disk.READ, tag, 2000, buffer1);
     	cbt1.requestDone(dr1);
-    	t.is_true(cbt1.list.containsKey(tag)); 
+    	t.is_true(cbt1.list.containsKey(tag));
+    	t.is_equal(1, cbt1.list.size());
+    	
+    	tag = 34;
+    	DiskResult dr2 = new DiskResult(Disk.READ, tag, 2000, buffer1);
+    	cbt1.requestDone(dr2);
+    	t.is_true(cbt1.list.containsKey(tag));
+    	t.is_equal(2, cbt1.list.size());
+    	
+    	tag = 35;
+    	DiskResult dr3 = new DiskResult(Disk.READ, tag, 2000, buffer1);
+    	cbt1.requestDone(dr3);
+    	t.is_true(cbt1.list.containsKey(tag));
+    	t.is_equal(3, cbt1.list.size());
+    	
+    	
+    	
+    	// dontWaitForTag
+    	t.set_method("dontWaitForTag()");
+    	
+    	cbt1.dontWaitForTag(33);
+    	t.is_equal(2, cbt1.list.size());
+    	t.is_equal(0, cbt1.dontWaits.size());
+    	t.is_true(cbt1.list.containsKey(34));
+    	t.is_true(cbt1.list.containsKey(35));
+    	
+    	cbt1.dontWaitForTag(33);
+    	t.is_equal(2, cbt1.list.size());
+    	t.is_equal(1, cbt1.dontWaits.size());
+    	t.is_true(cbt1.dontWaits.contains(33));
+    	t.is_true(cbt1.list.containsKey(34));
+    	t.is_true(cbt1.list.containsKey(35));
+    	
+    	cbt1.dontWaitForTag(32);
+    	t.is_equal(2, cbt1.list.size());
+    	t.is_equal(2, cbt1.dontWaits.size());
+    	t.is_true(cbt1.dontWaits.contains(33));
+    	t.is_true(cbt1.dontWaits.contains(32));
+    	t.is_true(cbt1.list.containsKey(34));
+    	t.is_true(cbt1.list.containsKey(35));
+    	
+    	cbt1.dontWaitForTag(34);
+    	t.is_equal(1, cbt1.list.size());
+    	t.is_equal(2, cbt1.dontWaits.size());
+    	t.is_true(cbt1.dontWaits.contains(33));
+    	t.is_true(cbt1.dontWaits.contains(32));
+    	t.is_true(cbt1.list.containsKey(35));
+    	
+    	cbt1.dontWaitForTag(35);
+    	t.is_equal(0, cbt1.list.size());
+    	t.is_equal(2, cbt1.dontWaits.size());
+    	t.is_true(cbt1.dontWaits.contains(33));
+    	t.is_true(cbt1.dontWaits.contains(32));
+    	
+    	DiskResult dr4 = new DiskResult(Disk.READ, 33, 2000, buffer1);
+    	cbt1.requestDone(dr4);
+    	t.is_equal(0, cbt1.list.size());
+    	t.is_equal(1, cbt1.dontWaits.size());
+    	t.is_true(cbt1.dontWaits.contains(32));
+    	
+    	DiskResult dr5 = new DiskResult(Disk.READ, 32, 2000, buffer1);
+    	cbt1.requestDone(dr5);
+    	t.is_equal(0, cbt1.list.size());
+    	t.is_equal(0, cbt1.dontWaits.size());
+    	
+    	
+    	
+    	
+    	// dontWaitForTags(Vector)
+    	t.set_method("dontWaitForTag(Vector)");
+    	Vector<Integer> v1 = new Vector<Integer>();
+    	v1.add(100);
+    	v1.add(101);
+    	v1.add(102);
+    	
+    	cbt1.dontWaitForTags(v1);
+    	t.is_equal(3, cbt1.dontWaits.size());
+    	t.is_true(cbt1.dontWaits.contains(100));
+    	t.is_true(cbt1.dontWaits.contains(101));
+    	t.is_true(cbt1.dontWaits.contains(102));
+    	
+    	v1 = new Vector<Integer>();
+    	v1.add(103);
+    	v1.add(104);
+    	v1.add(105);
+    	
+    	cbt1.dontWaitForTags(v1);
+    	t.is_equal(6, cbt1.dontWaits.size());
+    	t.is_true(cbt1.dontWaits.contains(103));
+    	t.is_true(cbt1.dontWaits.contains(104));
+    	t.is_true(cbt1.dontWaits.contains(105));
+    	
+    	
+    	
+    	
+    	//wait for Tag
+    	t.set_method("waitForTag()");
+    	d1.startRequest(Disk.READ, 200, 555, buffer1);
+    	cbt1.waitForTag(200);
+    	t.is_equal(0, cbt1.list.size());
+    	
+    	d1.startRequest(Disk.READ, 201, 555, buffer1);
+    	cbt1.waitForTag(201);
+    	t.is_equal(0, cbt1.list.size());
+    	
+    	d1.startRequest(Disk.READ, 202, 555, buffer1);
+    	cbt1.waitForTag(202);
+    	t.is_equal(0, cbt1.list.size());
+    	
+    	
+    	
+    	
+    	// waitForTag(Vector)
+    	t.set_method("waitForTag(Vector)");
+    	v1 = new Vector<Integer>();
+    	v1.add(300);
+    	v1.add(301);
+    	v1.add(302);
+    	d1.startRequest(Disk.READ, 300, 555, buffer1);
+    	d1.startRequest(Disk.READ, 301, 555, buffer1);
+    	d1.startRequest(Disk.READ, 302, 555, buffer1);
+    	cbt1.waitForTags(v1);
+    	
     	
     }
 }

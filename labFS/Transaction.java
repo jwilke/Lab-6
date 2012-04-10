@@ -554,15 +554,15 @@ public class Transaction implements Serializable{
     	t.set_method("rememberLogSectors");
     	tran.rememberLogSectors(2, 100);
     	t.is_equal(2, tran.start_in_log);
-    	t.is_equal(102, tran.num_sects);
+    	t.is_equal(101, tran.num_sects);
     	
     	tran.rememberLogSectors(9836, 512);
     	t.is_equal(9836, tran.start_in_log);
-    	t.is_equal(514, tran.num_sects);
+    	t.is_equal(513, tran.num_sects);
     	
     	tran.rememberLogSectors(1, 1);
     	t.is_equal(1, tran.start_in_log);
-    	t.is_equal(3, tran.num_sects);
+    	t.is_equal(2, tran.num_sects);
     	
     	
     	
@@ -581,13 +581,13 @@ public class Transaction implements Serializable{
     	// recallLogSectorsNSectors()
     	t.set_method("recallLogSectorsNSectors()");
     	tran.rememberLogSectors(2, 100);
-    	t.is_equal(102, tran.recallLogSectorNSectors());
+    	t.is_equal(101, tran.recallLogSectorNSectors());
     	
     	tran.rememberLogSectors(2, 512);
-    	t.is_equal(514, tran.recallLogSectorNSectors());
+    	t.is_equal(513, tran.recallLogSectorNSectors());
     	
     	tran.rememberLogSectors(2, 10123);
-    	t.is_equal(10125, tran.recallLogSectorNSectors());
+    	t.is_equal(10124, tran.recallLogSectorNSectors());
     	
     	
     	
