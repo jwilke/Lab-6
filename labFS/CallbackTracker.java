@@ -7,7 +7,7 @@
  * on the class web page.
  *
  * (C) 2011 Mike Dahlin
- *
+ * a change
  */
 
 import java.util.Vector;
