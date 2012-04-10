@@ -30,6 +30,7 @@ public class LogStatus{
 	private byte[] bitmap;
 	private SimpleLock lock;
 	private Condition is_full;
+	private Disk disk;
 
 	public int CURRENT_TAG = 0;
 	private final int START_LOG = 0;
@@ -39,7 +40,8 @@ public class LogStatus{
 	/**
 	 * Start off cold. Use other method for starting from log
 	 */
-	public LogStatus() {
+	public LogStatus(Disk d) {
+		disk = d;
 		lock = new SimpleLock();
 		is_full = lock.newCondition();
 
