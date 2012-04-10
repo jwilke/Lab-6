@@ -7,7 +7,7 @@
  * on the class web page.
  *
  * (C) 2011 Mike Dahlin
- * a change
+ *
  */
 
 import java.util.HashMap;
@@ -22,6 +22,7 @@ public class CallbackTracker implements DiskCallback{
 	
 	public CallbackTracker() {
 		lock = new SimpleLock();
+		//other thing that i added
 	}
 	
 	
