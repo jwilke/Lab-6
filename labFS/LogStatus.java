@@ -31,6 +31,7 @@ public class LogStatus{
 	private SimpleLock lock;
 	private Condition is_full;
 	private Disk disk;
+	private CallbackTracker cbt;
 
 	public int CURRENT_TAG = 0;
 	private final int START_LOG = 0;
@@ -40,7 +41,8 @@ public class LogStatus{
 	/**
 	 * Start off cold. Use other method for starting from log
 	 */
-	public LogStatus(Disk d) {
+	public LogStatus(Disk d, CallbackTracker c, WriteBackList wbt) {
+		cbt = c;
 		disk = d;
 		lock = new SimpleLock();
 		is_full = lock.newCondition();
@@ -51,6 +53,61 @@ public class LogStatus{
 		for(int i = 0; i < bitmap.length; i++) {
 			bitmap[i] = 0;
 		}
+		
+		//set up off of old data
+		start = logStartPoint();
+		current = logCurrent();
+		//find the final commit
+		int last = findLastCommit();
+		// add all committe transactions to wbl
+		addTransactions(last, wbt);
+	}
+
+	private void addTransactions(int last, WriteBackList wbt) {
+		byte[] buffer = new byte[Disk.SECTOR_SIZE];
+		byte[] header = new byte[Disk.SECTOR_SIZE];
+		int beg = start;
+		while (beg != start) {
+			int tag = CURRENT_TAG++;
+			try {
+				disk.startRequest(Disk.READ, tag, last, header);
+			} catch (Exception e) {}
+			cbt.waitForTag(tag);
+			beg++;
+			Transaction temp = Transaction.parseLogBytes(header);
+			for (int i = 0; i < Transaction.parseHeader(header); i++, beg++) {
+				tag = CURRENT_TAG++;
+				try {
+					disk.startRequest(Disk.READ, tag, last, buffer);
+				} catch (Exception e) {}
+				cbt.waitForTag(tag);
+				temp.addWrite(Common.byteToInt(header, Transaction.OFFSET + i), buffer);
+			}
+		}
+	}
+
+	private int findLastCommit() {
+		byte[] commit = new byte[Disk.SECTOR_SIZE];
+		commit[0] = (byte) 'c';
+		commit[1] = (byte) 'o';
+		commit[2] = (byte) 'm';
+		commit[3] = (byte) 'm';
+		commit[4] = (byte) 'i';
+		commit[5] = (byte) 't';
+		byte[] buffer = new byte[Disk.SECTOR_SIZE];
+		
+		int last = current;
+		while (last != start) {
+			int tag = CURRENT_TAG++;
+			try {
+				disk.startRequest(Disk.READ, tag, last, buffer);
+			} catch (Exception e) {}
+			cbt.waitForTag(tag);
+			if (commit.equals(buffer)) {
+				return last;
+			}
+		}
+		return last;
 	}
 
 	// 
@@ -161,15 +218,30 @@ public class LogStatus{
 	// the sectors about to be reserved/reused.
 	//
 	public int logStartPoint(){ // added Disk d
-		return start;
+		int tag = CURRENT_TAG++;
+		byte[] buffer = new byte[Disk.SECTOR_SIZE];
+		                         
+		try {
+			disk.startRequest(Disk.READ, tag, HEADER_LOC, buffer);
+		} catch (Exception e) {}
+		
+		cbt.waitForTag(tag);
+		return Common.byteToInt(buffer, 0);
 	}
 	
 	public int logCurrent() {
-		// return current sector header
-		return current;
+		int tag = CURRENT_TAG++;
+		byte[] buffer = new byte[Disk.SECTOR_SIZE];
+		                         
+		try {
+			disk.startRequest(Disk.READ, tag, HEADER_LOC, buffer);
+		} catch (Exception e) {}
+		
+		cbt.waitForTag(tag);
+		return Common.byteToInt(buffer, 4);
 	}
 
-	public void writeCommit(Disk d, CallbackTracker cbt) throws IllegalArgumentException, IOException {
+	public void writeCommit() throws IllegalArgumentException, IOException {
 		lock.lock();
 		// add commit to end
 		int location = reserveLogSectors(1);
@@ -179,7 +251,7 @@ public class LogStatus{
 		byte[] header = new byte[Disk.SECTOR_SIZE];
 		Common.intToByte(start, header, 0);
 		Common.intToByte(current, header, 4);
-		d.startRequest(Disk.WRITE, tag, HEADER_LOC, header);
+		disk.startRequest(Disk.WRITE, tag, HEADER_LOC, header);
 		lock.unlock();
 		cbt.waitForTag(tag);
 		lock.lock();
@@ -192,7 +264,7 @@ public class LogStatus{
 		commit[4] = (byte) 'i';
 		commit[5] = (byte) 't';
 		tag = CURRENT_TAG++;
-		d.startRequest(Disk.WRITE, tag, location, commit);
+		disk.startRequest(Disk.WRITE, tag, location, commit);
 		lock.unlock();
 		cbt.waitForTag(tag);
 	}
@@ -203,7 +275,7 @@ public class LogStatus{
 
 		// Constructor
 		t.set_method("Constructor()");
-		LogStatus ls1= new LogStatus();
+		LogStatus ls1= new LogStatus(null, null, null);
 		t.is_equal(0, ls1.start, "start");
 		t.is_equal(0, ls1.current, "current");
 		t.is_true(ls1.lock instanceof SimpleLock, "lock");
