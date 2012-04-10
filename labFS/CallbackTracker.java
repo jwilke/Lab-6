@@ -10,8 +10,11 @@
  *
  */
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Vector;
+import java.util.concurrent.locks.Condition;
 
 public class CallbackTracker implements DiskCallback{
 	
@@ -19,53 +22,99 @@ public class CallbackTracker implements DiskCallback{
 	
 	SimpleLock lock;
 	HashMap<Integer, DiskResult> list;
+	ArrayList<Integer> dontWaits;
+	Condition tagBroadcaster;
 	
 	public CallbackTracker() {
 		lock = new SimpleLock();
-		//other thing that i added
+		list = new HashMap<Integer, DiskResult>();
+		dontWaits = new ArrayList<Integer>();
+		tagBroadcaster = lock.newCondition();
 	}
 	
 	
     public void requestDone(DiskResult result){
+    	lock.lock();
+    	
+    	if(dontWaits.contains(result.getTag())) {
+    		dontWaits.remove(result.getTag());
+    		lock.unlock();
+    		return;
+    	}
+    	
+    	
         // save result
+    	list.put(result.getTag(), result);
     	// broadcast
+    	tagBroadcaster.notifyAll();
+    	
+    	
+    	lock.unlock();
     }
 
     //
     // Wait for one tag to be done
     //
-    public DiskResult waitForTag(int tag){
+    public DiskResult waitForTag(int tag) {
+    	lock.lock();
         // check for tag in all list
-    	// if not there wait
+    	while(!list.containsKey(tag)) {
+    		// if not there wait
+    		try {
+				tagBroadcaster.await();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+    	}
     	
+    	DiskResult ret = list.get(tag);
     	// if there: remove for list, return result
-        return null;
+    	lock.unlock();
+        return ret;
     }
 
     //
     // Wait for a set of tags to be done
     //
-    public Vector<Integer> waitForTags(Vector<Integer> tags){
-        // TBD
-        return null;
+    public Vector<DiskResult> waitForTags(Vector<Integer> tags){
+    	lock.lock();
+    	Iterator<Integer> iter = tags.iterator();
+    	Vector<DiskResult> ret = new Vector<DiskResult>();
+    	int ctag;
+    	while(iter.hasNext()) {
+    		ctag = iter.next();
+    		while(!list.containsKey(ctag)) {
+        		// if not there wait
+        		try {
+    				tagBroadcaster.await();
+    			} catch (InterruptedException e) {
+    				e.printStackTrace();
+    			}
+        	}
+    		ret.add(list.get(ctag));
+    	}
+    	lock.unlock();
+        return ret;
     }
 
     //
     // To avoid memory leaks, need to tell CallbackTracker
     // if there are tags that we don't plan to wait for.
-    
-    
     // When these results arrive, drop them on the
     // floor.
     //
     public void dontWaitForTag(int tag){
-        // TBD
+    	lock.lock();
+    	dontWaits.add(tag);
+    	lock.unlock();
     }
 
-    public void dontWaitForTags(Vector tags){
-        // TBD
+    public void dontWaitForTags(Vector<Integer> tags){
+    	lock.lock();
+    	Iterator<Integer> iter = tags.iterator();
+    	while(iter.hasNext()) {
+    		dontWaits.add(iter.next());
+    	}
+    	lock.unlock();
     }
-
-
-
 }
