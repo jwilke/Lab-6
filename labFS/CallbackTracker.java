@@ -10,14 +10,20 @@
  *
  */
 
+import java.util.HashMap;
 import java.util.Vector;
 
 public class CallbackTracker implements DiskCallback{
 	
-	/*
-	 * List of DiskResults
-	 * SimpleLock lock
-	 */
+	
+	
+	SimpleLock lock;
+	HashMap<Integer, DiskResult> list;
+	
+	public CallbackTracker() {
+		lock = new SimpleLock();
+	}
+	
 	
     public void requestDone(DiskResult result){
         // save result
@@ -30,6 +36,7 @@ public class CallbackTracker implements DiskCallback{
     public DiskResult waitForTag(int tag){
         // check for tag in all list
     	// if not there wait
+    	
     	// if there: remove for list, return result
         return null;
     }
@@ -37,7 +44,7 @@ public class CallbackTracker implements DiskCallback{
     //
     // Wait for a set of tags to be done
     //
-    public Vector waitForTags(Vector tags){
+    public Vector<Integer> waitForTags(Vector<Integer> tags){
         // TBD
         return null;
     }
@@ -45,6 +52,8 @@ public class CallbackTracker implements DiskCallback{
     //
     // To avoid memory leaks, need to tell CallbackTracker
     // if there are tags that we don't plan to wait for.
+    
+    
     // When these results arrive, drop them on the
     // floor.
     //
