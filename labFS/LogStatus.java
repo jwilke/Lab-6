@@ -129,7 +129,7 @@ public class LogStatus{
 		// int oldCurent = current
 		int begin = current;
 		// current += nSectors
-		current = ((current + START_LOG + nSectors) % Common.ADISK_REDO_LOG_SECTORS) - START_LOG;
+		current = ((current + START_LOG + nSectors) % Common.ADISK_REDO_LOG_SECTORS) - START_LOG; 
 		// set bitmap
 		setBits(begin, nSectors);
 		// return oldCurrrent
@@ -144,8 +144,7 @@ public class LogStatus{
 	 */
 	private void setBits(int begin, int length) {
 		while(length > 0) {
-			if(begin >= 1024) System.out.println("begin is problem");
-			assert(begin < 1024);
+			if(begin >= 1024) System.out.println("begin is problem: " + begin);
 			int curByte = begin / 8;
 			for(int j = begin%8; j < 8 && length > 0; j++, begin++, length--) {
 				bitmap[curByte] = (byte) (bitmap[curByte] | (1 << (7 - j)));
@@ -163,7 +162,6 @@ public class LogStatus{
 	private void freeBits(int begin, int length) {
 		while(length > 0) {
 			if(begin >= 1024) System.out.println("begin is problem");
-			assert(begin < 1024);
 			int curByte = begin / 8;
 			for(int j = begin%8; j < 8 && length > 0; j++, begin++, length--) {
 				bitmap[curByte] = (byte) (bitmap[curByte] & (-1 ^ (1 << (7 - j))));
@@ -230,6 +228,7 @@ public class LogStatus{
 	// the sectors about to be reserved/reused.
 	//
 	public int logStartPoint(){ // added Disk d
+		lock.lock();
 		int tag = CURRENT_TAG++;
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
 		                         
@@ -238,10 +237,13 @@ public class LogStatus{
 		} catch (Exception e) {}
 		
 		if(cbt != null) cbt.waitForTag(tag);
-		return Common.byteToInt(buffer, 0);
+		int out = Common.byteToInt(buffer, 0);
+		lock.unlock();
+		return out;
 	}
 	
 	public int logCurrent() {
+		lock.lock();
 		int tag = CURRENT_TAG++;
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
 		                         
@@ -250,12 +252,14 @@ public class LogStatus{
 		} catch (Exception e) {}
 		
 		if(cbt != null) cbt.waitForTag(tag);
-		return Common.byteToInt(buffer, 4);
+		int out = Common.byteToInt(buffer, 4);
+		lock.unlock();
+		return out;
 	}
 
 	public void writeCommit() throws IllegalArgumentException, IOException {
 		lock.lock();
-		current++;
+		current = (current + 1) % Common.ADISK_REDO_LOG_SECTORS;
 		// add commit to end
 		int location = reserveLogSectors(1);
 		
