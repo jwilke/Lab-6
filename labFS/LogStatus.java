@@ -110,6 +110,13 @@ public class LogStatus{
 		}
 		return last;
 	}
+	
+	public int getNextTag() {
+		lock.lock();
+		int tag = CURRENT_TAG++;
+		lock.unlock();
+		return tag;
+	}
 
 	// 
 	// Return the index of the log sector where
@@ -137,6 +144,8 @@ public class LogStatus{
 	 */
 	private void setBits(int begin, int length) {
 		while(length > 0) {
+			if(begin >= 1024) System.out.println("begin is problem");
+			assert(begin < 1024);
 			int curByte = begin / 8;
 			for(int j = begin%8; j < 8 && length > 0; j++, begin++, length--) {
 				bitmap[curByte] = (byte) (bitmap[curByte] | (1 << (7 - j)));
@@ -153,6 +162,8 @@ public class LogStatus{
 	 */
 	private void freeBits(int begin, int length) {
 		while(length > 0) {
+			if(begin >= 1024) System.out.println("begin is problem");
+			assert(begin < 1024);
 			int curByte = begin / 8;
 			for(int j = begin%8; j < 8 && length > 0; j++, begin++, length--) {
 				bitmap[curByte] = (byte) (bitmap[curByte] & (-1 ^ (1 << (7 - j))));
@@ -244,6 +255,7 @@ public class LogStatus{
 
 	public void writeCommit() throws IllegalArgumentException, IOException {
 		lock.lock();
+		current++;
 		// add commit to end
 		int location = reserveLogSectors(1);
 		

@@ -391,11 +391,13 @@ public class Tester {
 		test++;
 		if(i1.length != i2.length) {
 			print_fail("int[]", i1.toString(), i2.toString(), n + ": size");
+			failed++;
 			return false;
 		} else {
 			for (int i = 0; i < i1.length; i++) {
 				if (i1[i] != i2[i]) {
-					print_fail("int[]", i1.toString(), i2.toString(), n + ": Array[" + i + "]");
+					print_fail("int[]", arrayToString(i1), arrayToString(i2), n + ": Array[" + i + "]");
+					failed++;
 					return false;
 				}
 			}
@@ -406,17 +408,37 @@ public class Tester {
 	public boolean is_equal(int[] i1, int[] i2) {
 		test++;
 		if(i1.length != i2.length) {
-			print_fail("int[]", i1.toString(), i2.toString());
+			print_fail("int[]", arrayToString(i1), arrayToString(i2));
+			failed++;
 			return false;
 		} else {
 			for (int i = 0; i < i1.length; i++) {
 				if (i1[i] != i2[i]) {
-					print_fail("int[]", i1.toString(), i2.toString());
+					print_fail("int[]", arrayToString(i1), arrayToString(i2));
+					failed++;
 					return false;
 				}
 			}
 		}
 		return true;
+	}
+	
+	public String arrayToString(int[] arr) {
+		String out = "[";
+		for (int i = 0; i < arr.length - 1; i++ ) {
+			out += arr[i] + ", ";
+		}
+		out += arr[arr.length-1] + "]";
+		return out;
+	}
+	
+	public String arrayToString(byte[] arr) {
+		String out = "[";
+		for (int i = 0; i < arr.length - 1; i++ ) {
+			out += arr[i] + ", ";
+		}
+		out += arr[arr.length-1] + "]";
+		return out;
 	}
 	
 	/**
@@ -429,12 +451,14 @@ public class Tester {
 	public boolean is_equal(byte[] b1, byte[] b2, String n) {
 		test++;
 		if(b1.length != b2.length) {
-			print_fail("int[]", b1.toString(), b2.toString(), n + ": size");
+			print_fail("int[]", arrayToString(b1), arrayToString(b2), n + ": size");
+			failed++;
 			return false;
 		} else {
 			for (int i = 0; i < b1.length; i++) {
 				if (b1[i] != b2[i]) {
-					print_fail("int[]", b1.toString(), b2.toString(), n + ": Array[" + i + "]");
+					print_fail("int[]", arrayToString(b1), arrayToString(b2), n + ": Array[" + i + "]");
+					failed++;
 					return false;
 				}
 			}
@@ -445,12 +469,14 @@ public class Tester {
 	public boolean is_equal(byte[] b1, byte[] b2) {
 		test++;
 		if(b1.length != b2.length) {
-			print_fail("int[]", b1.toString(), b2.toString());
+			print_fail("int[]", arrayToString(b1), arrayToString(b2));
+			failed++;
 			return false;
 		} else {
 			for (int i = 0; i < b1.length; i++) {
 				if (b1[i] != b2[i]) {
-					print_fail("int[]", b1.toString(), b2.toString());
+					print_fail("int[]", arrayToString(b1), arrayToString(b2));
+					failed++;
 					return false;
 				}
 			}

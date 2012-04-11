@@ -21,7 +21,7 @@ public class Transaction implements Serializable{
 	public static final int OFFSET = 40;
 	
 	private TransID id;
-	private LinkedList<Write> write_list;
+	LinkedList<Write> write_list;
 	private byte Status;
 	private int start_in_log;
 	private int num_sects;
@@ -56,9 +56,11 @@ public class Transaction implements Serializable{
     	is_writing = true;
     	
     	while(readers > 0) {
+    		is_writing = false;
     		try{
     			CV_writing.await();
     		} catch (Exception e) {}
+    		is_writing = true;
     	}
     	
     	// search for write with sectorNum
@@ -68,10 +70,12 @@ public class Transaction implements Serializable{
     	while(it.hasNext()) {
     		temp = it.next();
     		if(temp.secNum == sectorNum) {
+    			
     			found = true;
     			break;
     		}
     	}
+    	
     	
     	if(found) { // if it was found, update the buffer
     		temp.updateBuffer(sectorNum, buffer);
@@ -80,6 +84,7 @@ public class Transaction implements Serializable{
     		write_list.add(add);
     		num_sects++;
     	}
+    	
     	
     	is_writing = false;
     	CV_reading.signalAll();
@@ -312,7 +317,7 @@ public class Transaction implements Serializable{
     
     public boolean getUpdateS(int sec_num, byte buffer[]) {
     	lock.lock();
-    	if (Status == Common.COMMITED) {
+    	if (true) { // Status == Common.COMMITED
 	    	Iterator<Write> iter = write_list.iterator();
 	    	Write temp;
 	    	while(iter.hasNext()) {
@@ -703,6 +708,28 @@ public class Transaction implements Serializable{
     	t.is_equal(-1, tran2.start_in_log);
     	t.is_equal(Common.COMMITED, tran2.Status);
     	t.is_equal(4, tran2.write_list.size());
+    	
+    	
+    	
+    	
+    	// getUpdateS()
+    	t.set_method("getUpdates()");
+    	byte[] buffer1 = new byte[Disk.SECTOR_SIZE];
+    	for(int i = 0; i < buffer1.length; i++)
+    		buffer1[i] = (byte) i;
+    	byte[] buffer0 = new byte[Disk.SECTOR_SIZE];
+    	tran.addWrite(3000, buffer1);
+    	
+    	tran.getUpdateS(3000, buffer0);
+    	t.is_equal(buffer1, buffer0);
+    	
+    	for(int i = 0; i < buffer1.length; i++)
+    		buffer1[i] = (byte) (i + 1);
+    	buffer0 = new byte[Disk.SECTOR_SIZE];
+    	tran.addWrite(3000, buffer1);
+    	
+    	tran.getUpdateS(3000, buffer0);
+    	t.is_equal(buffer1, buffer0);
     	
     	
     	

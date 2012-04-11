@@ -43,6 +43,14 @@ public class Common{
 	  return (((int)buffer[offset]) << 24) | (((int)buffer[offset+1]) << 16) | (((int)buffer[offset+2]) << 8) | ((int)buffer[offset+3]);
   }
   
+  public static void printArray(byte[] b) {
+	  System.out.print("[");
+	  for (int i = 0; i < b.length-1; i++) {
+		  System.out.print(b[i] + ", ");
+	  }
+	  System.out.println(b[b.length-1] + "]");
+  }
+  
 }
 
 class Write{
@@ -68,6 +76,7 @@ class Write{
 	
 	public boolean updateBuffer(int secNum, byte b[]) {
 		if (!isSecNum(secNum)) return false;
+		
 		for (int i = 0; i < cData.length && i < b.length; i++) {
 			cData[i] = b[i];
 		}

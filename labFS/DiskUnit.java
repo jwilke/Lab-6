@@ -84,10 +84,14 @@ public class DiskUnit implements DiskCallback{
 		System.out.println("Testing CallbackTracker");
 		CallbackTracker.unit(t);
 		
+		System.out.println("Testing ADisk");
+		ADisk.unit(t, true);
+		//for(int i = 0; i < 1000; i++)
+			//ADisk.unit(t, false);
+		
 		System.out.println();
 		t.close();
-		
-		ADisk ad = new ADisk(true);
+		System.exit(0);
 	}
 
 
