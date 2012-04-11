@@ -14,7 +14,7 @@
 
 public class TransID{
 	
-	private static long tranCurrent = 0;
+	public static long tranCurrent = 0;
 	private long tranNum;
 	
   //

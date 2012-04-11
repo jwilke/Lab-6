@@ -42,49 +42,80 @@ public class LogStatus{
 	/**
 	 * Start off cold. Use other method for starting from log
 	 */
-	public LogStatus(Disk d, CallbackTracker c, WriteBackList wbt) {
+	public LogStatus(Disk d, CallbackTracker c) {
 		cbt = c;
 		disk = d;
 		lock = new SimpleLock();
 		is_full = lock.newCondition();
 
+		//System.out.println("Disk: " + disk);
+		//System.out.println("CallbackTracker: " + cbt);
+		//System.out.println("WBL: " + wbl + "\n\n\n\n");
+		
 		start = START_LOG;
 		current = START_LOG;
 		bitmap = new byte[Common.ADISK_REDO_LOG_SECTORS/8];
 		for(int i = 0; i < bitmap.length; i++) {
 			bitmap[i] = 0;
 		}
-		
+	}
+	
+	public void recover(WriteBackList wbl) {
 		//set up off of old data
 		start = logStartPoint();
 		current = logCurrent();
 		//find the final commit
 		int last = findLastCommit();
+		System.out.println("Last: " + last);
 		// add all committe transactions to wbl
-		addTransactions(last, wbt);
+		addTransactions(last, wbl);
 	}
 
-	private void addTransactions(int last, WriteBackList wbt) {
+	private void addTransactions(int last, WriteBackList wbl) {
+		lock.lock();
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
 		byte[] header = new byte[Disk.SECTOR_SIZE];
 		int beg = start;
-		while (beg != start) {
+		boolean found = false;
+		
+		int l = last;
+		//loop through sectors
+		while ((beg != last) && cbt != null) {
+			// examine header
 			int tag = CURRENT_TAG++;
 			try {
-				disk.startRequest(Disk.READ, tag, last, header);
+				disk.startRequest(Disk.READ, tag, beg, header);
 			} catch (Exception e) {}
 			cbt.waitForTag(tag);
-			beg++;
+			
+			// move to next sector
+			beg = (beg + 1) % Disk.ADISK_REDO_LOG_SECTORS;
+			if (!found) found = beg == last;
+			
+			// add sectors to Transaction
 			Transaction temp = Transaction.parseLogBytes(header);
-			for (int i = 0; i < Transaction.parseHeader(header); i++, beg++) {
+			for (int i = 0; i < Transaction.parseHeader(header); i++, beg = (beg + 1) % Disk.ADISK_REDO_LOG_SECTORS) {
+				//System.out.println(beg);
+				if (!found) found = beg == last;
 				tag = CURRENT_TAG++;
 				try {
-					disk.startRequest(Disk.READ, tag, last, buffer);
+					disk.startRequest(Disk.READ, tag, beg, buffer);
 				} catch (Exception e) {}
 				cbt.waitForTag(tag);
+				//Common.printArray(buffer);
 				temp.addWrite(Common.byteToInt(header, Transaction.OFFSET + i), buffer);
 			}
+			try {
+				temp.commit();
+			} catch (Exception e) {}
+			System.out.println(beg);
+			wbl.addCommitted(temp);
+			
 		}
+		System.out.println("Start: " + start);
+		System.out.println("Current: " + current);
+		System.out.println("Last: " + l);
+		lock.unlock();
 	}
 
 	private int findLastCommit() {
@@ -96,7 +127,7 @@ public class LogStatus{
 		commit[4] = (byte) 'i';
 		commit[5] = (byte) 't';
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
-		
+		System.out.println("Recovery Stages");
 		int last = current;
 		while (last != start) {
 			int tag = CURRENT_TAG++;
@@ -107,6 +138,7 @@ public class LogStatus{
 			if (commit.equals(buffer)) {
 				return last;
 			}
+			last--;
 		}
 		return last;
 	}
@@ -295,7 +327,7 @@ public class LogStatus{
 		Disk d = new Disk(new CallbackTracker());
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
 		d.startRequest(Disk.WRITE, 397, Common.ADISK_REDO_LOG_SECTORS, buffer);
-		LogStatus ls1= new LogStatus(null, null, null);
+		LogStatus ls1= new LogStatus(null, null);
 		t.is_equal(0, ls1.start, "start");
 		t.is_equal(0, ls1.current, "current");
 		t.is_true(ls1.lock instanceof SimpleLock, "lock");
@@ -440,7 +472,7 @@ public class LogStatus{
 		t.is_equal(0, ls1.bitmap[16], "bitmap");
 		
 		
-		// recoverySectorsInUse TODO
+		// recoverySectorsInUse
 		t.set_method("recoverySectorsInUse()");
 		ls1.recoverySectorsInUse(234, 700);
 		t.is_equal(234, ls1.start, "start");

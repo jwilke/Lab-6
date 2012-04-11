@@ -51,6 +51,19 @@ public class Common{
 	  System.out.println(b[b.length-1] + "]");
   }
   
+  public static boolean arrayEquals(byte[] b1, byte[] b2) {
+	  if(b1 == null && b2 == null) return true;
+	  if(b1 == null || b2 == null) return false;
+	  
+	  boolean out = b1.length == b2.length;
+	  
+	  for (int i = 0; i < b1.length && out; i++) {
+		  out = b1[i] == b2[i];
+	  }
+	  
+	  return out;
+  }
+  
 }
 
 class Write{

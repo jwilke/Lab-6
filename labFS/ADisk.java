@@ -71,7 +71,9 @@ public class ADisk{
 			cbt.waitForTags(tags);
 		}
 
-		log = new LogStatus(disk, cbt, wbl);
+		
+		log = new LogStatus(disk, cbt);
+		if(!format) log.recover(wbl);
 		// else
 		// create new disk from log passing cbt
 
@@ -162,17 +164,17 @@ public class ADisk{
 		Vector<Integer> tags = new Vector<Integer>();
 		int temp_tag;
 		for(int i = 0; i < temp.getNUpdatedSectors()+1; i++) {
-			sector = Arrays.copyOfRange(dataToWrite, i*Disk.SECTOR_SIZE, (i+1)*Disk.SECTOR_SIZE);
+			sector = Transaction.copyOfRange(dataToWrite, i*Disk.SECTOR_SIZE, (i+1)*Disk.SECTOR_SIZE);
 			temp_tag = log.getNextTag();
 			disk.startRequest(disk.WRITE, temp_tag, (logstart+i)%disk.ADISK_REDO_LOG_SECTORS, sector);
 			tags.add(temp_tag);
 		}
-		System.out.println("T-Started Req: " + thread);
+		//System.out.println("T-Started Req: " + thread);
 		// issue barrier to log
 		disk.addBarrier();
-		System.out.println("T-Barrior: " + thread);
+		//System.out.println("T-Barrior: " + thread);
 		cbt.waitForTags(tags);
-		System.out.println("T: " + thread);
+		//System.out.println("T: " + thread);
 		// issue commit to log
 		log.writeCommit();
 		// move it from atl.remove(tid) to wbl.addCommitted()
@@ -310,6 +312,7 @@ public class ADisk{
 
 	public static void unit(Tester t, boolean first) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
 		t.set_object("ADisk");
+		t.is_equal(14, TransID.tranCurrent);
 		TESTING = true;
 		ADisk ad1 = new ADisk(true);
 
@@ -319,7 +322,7 @@ public class ADisk{
 			t.is_equal(15359, ad1.getNSectors());
 		}
 
-
+		
 		// beginTransaction
 		t.set_method("beginTransaction");
 		TransID tid1 = ad1.beginTransaction();
@@ -334,8 +337,8 @@ public class ADisk{
 		t.is_equal(16, tid3.getTranNum());
 		t.is_true(ad1.atl.get(tid3) != null);
 
-
-
+		
+		
 		// abortTransaction
 		t.set_method("abortTransaction");
 		ad1.abortTransaction(tid1);
@@ -412,7 +415,7 @@ public class ADisk{
 		t.is_equal(buffer3, buffer0);
 
 
-
+		
 
 		// commitTransaction
 		t.set_method("commitTransaction");
@@ -486,8 +489,23 @@ public class ADisk{
 		ad1.readSector(tid3, 2003, buffer0);
 		t.is_equal(buffer3, buffer0);
 
-
-
+		
+		// test Recovery
+		t.set_method("Test recovery");
+		System.out.println("New Stuff");
+		ad1 = new ADisk(false);
+		
+		t.is_equal(3, ad1.wbl.list.size());
+		/*
+		ad1.readSector(tid1, 2001, buffer0);
+		t.is_equal(buffer1, buffer0);
+		ad1.readSector(tid2, 2002, buffer0);
+		t.is_equal(buffer2, buffer0);
+		ad1.readSector(tid3, 2003, buffer0);
+		t.is_equal(buffer3, buffer0);
+		*/
+		
+		/*
 		System.out.println("Testing ADisk - Test Set 2");
 		TESTING = false;
 		ad1 = new ADisk(true);
@@ -539,6 +557,7 @@ public class ADisk{
 			}
 		}
 
+		*/
 
 	}
 }

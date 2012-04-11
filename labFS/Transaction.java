@@ -366,7 +366,7 @@ public class Transaction implements Serializable{
     // committed transaction and return it. Otherwise
     // throw an exception or return null.
     public static Transaction parseLogBytes(byte buffer[]){
-    	assert(buffer[12] == Common.COMMITED);
+    	//assert(buffer[12] == Common.COMMITED);
     		
     	Transaction t = new Transaction();
     	t.Status = Common.COMMITED;
