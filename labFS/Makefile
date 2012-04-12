@@ -18,7 +18,7 @@ JAVAC = javac
 JFLAGS = -g
 JAVA_SRCS = ActiveTransactionList.java Common.java Disk.java DiskWorker.java PTree.java \
 	SimpleLock.java WriteBackList.java ADisk.java DirEnt.java DiskResult.java FlatFS.java ResourceException.java Transaction.java \
-	CallbackTracker.java DiskCallback.java DiskUnit.java LogStatus.java RFS.java TransID.java WorkProducer.java WriteBackWorker.java Tester.java
+	CallbackTracker.java DiskCallback.java DiskUnit.java LogStatus.java RFS.java TransID.java WorkProducer.java WriteBackWorker.java Tester.java 
 
 CLASSES = $(JAVA_SRCS:.java=.class) $(OTHER_CLASSES)
 
@@ -48,7 +48,7 @@ handin-2: handin.tar
 handin-3: handin.tar
 	echo "FIX MAKEFILE TO INCLUDE THE TA user ID for the cs machines"
 	echo "Turning in handin.tar containing the following files:"
-	tar tf handin.tar
+	tar tf handin3.tar
 	$(TURNIN) --submit $(GRADER) $(LAB3_NAME) handin.tar
 
 handin.tar: clean
