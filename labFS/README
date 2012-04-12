@@ -1,0 +1,90 @@
+Graham Benevelli
+grambo
+grahambenevelli@gmail.com
+grahambo
+
+Jake Wilke
+jlw3599
+jake.wilke@gmail.com
+jwilke
+
+Slip Days used: 1
+
+ActiveTransactionList.java
+The list of Transaction that are not yet committed
+
+ADisk.java
+The disk itself. Can send reads and writes to disk.
+
+ADiskTestThread.java
+Testing thread, does numerous writes
+
+CallbackTracker.java
+Keeps back of what reads and writes are done
+
+Common.java
+Usefull functions and a write class
+
+DirEnt.java
+Not used
+
+Disk.java
+The base disk, provided by teacher
+
+DiskCallback.java
+Interface used by callbacktracker
+
+DiskResult.java
+Info passed back to callbacktracker
+
+DiskUnit.java
+Disk unit tests
+
+DiskWorker.java
+Get work from the disk and sends a finish to CallBackTracker
+
+FlatFS.java
+Not used
+
+LogStatus.java
+Manages the log on disk.
+
+PTree.java
+Not used
+
+ResourceException.java
+Not used
+
+RFS.java
+Not used
+
+SimpleLock.java
+Our lock and condition variables
+
+Tester.java
+Unit tester, like junit
+
+Transaction.java
+Holds onto writes that need to go to disk
+
+TransID.java
+Holds the numeric value of the transaction, keeps them distinct
+
+WorkProducer.java
+not used
+
+WriteBackList.java
+Holds onto the transaction that are committed but not necessarly on disk yet. 
+
+WriteBackWorker.java
+Takes transaction off the WritebackList and sends to disk. Also takes them off the list when done.
+
+
+The design starts with a transaction at the lowest level. IT contains writes that are going to disk, organized by sector. The ADisk creates one and sends it back to the user. Then using the id for the transaction the user can send writes or commit the writes. Before they are committed they are put ont he ActiveTransactionList, which holds them in a list and allows the user to add more writes to the included transactions. When the ADisk commits the transaction goes to the WriteBackList where it stays until the worker takes it off and sends it to disk. Also during the commit, the information of the Transactions are writen to a log on disk. The transaction can only be written after it is committed to the log.
+
+We lock on the transaction class. In here we allow reads to read as much as they wont, until there is a write. When there is a write, then the reads have to wait. The two lists also lock. The writebacklist also has a wait when something tries to get something and it is empty. Lastly the logStatus also has a lock. 
+
+Recovery works with the log. The first 1024 sectors are all part of hte log. The one right after that holds onto the log pointers. The first is the start of the log. This is where the first file that may not be on disk is. This can be moved when we know something is off the log. Also is the current location where there is no more log entries, ie garbage. When a commit happens this info get sent to disk. If the disk fails, it will look at the log and see what transactions are still there. If there are any, they are added to the WriteBackList and treated just like committed transactions.
+
+
+Our testing strategy is to first test all the base aspects of ADisk. Each class is unit tested and every method to make sure that nothing suprising happens. This ended up being more then 1000 tests. Then the ADisk is run with several tests, first with one thread and then with others. We changed how we did the multithreaded version running up to 8 different threads. And each of these tests were run at least 100 times to make sure there was no deadlock. When an error was found the mistake was tracked down. 
