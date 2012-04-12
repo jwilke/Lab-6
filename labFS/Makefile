@@ -9,7 +9,7 @@
 #
 
 TURNIN := /lusr/bin/turnin
-GRADER := FIXME
+GRADER := ctlight
 LAB1_NAME := cs439-labADisk
 LAB2_NAME := cs439-labFlatFS
 LAB3_NAME := cs439-labHierFS
@@ -18,7 +18,7 @@ JAVAC = javac
 JFLAGS = -g
 JAVA_SRCS = ActiveTransactionList.java Common.java Disk.java DiskWorker.java PTree.java \
 	SimpleLock.java WriteBackList.java ADisk.java DirEnt.java DiskResult.java FlatFS.java ResourceException.java Transaction.java \
-	CallbackTracker.java DiskCallback.java DiskUnit.java LogStatus.java RFS.java TransID.java
+	CallbackTracker.java DiskCallback.java DiskUnit.java LogStatus.java RFS.java TransID.java WorkProducer.java WriteBackWorker.java Tester.java
 
 CLASSES = $(JAVA_SRCS:.java=.class) $(OTHER_CLASSES)
 
