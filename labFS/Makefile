@@ -43,6 +43,7 @@ handin-1: handin.tar
 	echo "Turning in handin.tar containing the following files:"
 	tar tf handin.tar
 	$(TURNIN) --submit $(GRADER) $(LAB1_NAME) handin.tar
+	
 
 handin-2: handin.tar
 	echo "FIX MAKEFILE TO INCLUDE THE TA user ID for the cs machines"
