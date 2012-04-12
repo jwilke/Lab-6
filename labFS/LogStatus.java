@@ -18,14 +18,6 @@ import java.util.concurrent.locks.Condition;
  */
 public class LogStatus{
 
-	/*
-	 * int start
-	 * int current
-	 * int firstSecHeader = 2
-	 * 
-	 * bit map
-	 */
-
 	private int start;
 	private int current;
 	private byte[] bitmap;
@@ -56,6 +48,10 @@ public class LogStatus{
 		}
 	}
 
+	/** 
+	 * not starting off cold, uses the log to add to wbl
+	 * @param wbl
+	 */
 	public void recover(WriteBackList wbl) {
 		//set up off of old data
 		start = logStartPoint();
@@ -68,6 +64,7 @@ public class LogStatus{
 
 	private void addTransactions(int last, WriteBackList wbl) {
 		lock.lock();
+		
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
 		byte[] header = new byte[Disk.SECTOR_SIZE];
 		int beg = start;
@@ -115,6 +112,12 @@ public class LogStatus{
 		lock.unlock();
 	}
 
+	/**
+	 * used for testing
+	 * @param last
+	 * @throws IllegalArgumentException
+	 * @throws IOException
+	 */
 	private void printlog(int last) throws IllegalArgumentException, IOException {
 		byte[] buffer = new byte[Disk.ADISK_REDO_LOG_SECTORS];
 		for (int i = start; i < last; i++) {
@@ -124,6 +127,11 @@ public class LogStatus{
 
 	}
 
+	/**
+	 * Used in recovery
+	 * Find the last commit and return it
+	 * @return
+	 */
 	private int findLastCommit() {
 		byte[] commit = new byte[Disk.SECTOR_SIZE];
 		commit[0] = (byte) 'c';
@@ -134,6 +142,8 @@ public class LogStatus{
 		commit[5] = (byte) 't';
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
 		int last = current;
+		
+		// cycle through sectors
 		while (last != start) {
 			int tag = CURRENT_TAG++;
 			try {
@@ -148,6 +158,10 @@ public class LogStatus{
 		return last;
 	}
 
+	/** 
+	 * used on all writes
+	 * @return
+	 */
 	public int getNextTag() {
 		lock.lock();
 		int tag = CURRENT_TAG++;
@@ -176,6 +190,7 @@ public class LogStatus{
 
 	/**
 	 * Set the bits from the starting location to the end of length
+	 * not used in end
 	 * @param begin - the beginning location in terms of bits
 	 * @param length - the length from start to end
 	 */
@@ -193,6 +208,7 @@ public class LogStatus{
 
 	/**
 	 * Set the bits in the bitmap to 0
+	 * not used in end
 	 * @param begin - the start location in terms of bits
 	 * @param length - the length from start to end
 	 */
@@ -268,6 +284,7 @@ public class LogStatus{
 		int tag = CURRENT_TAG++;
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
 
+		// get from log
 		try {
 			disk.startRequest(Disk.READ, tag, HEADER_LOC, buffer);
 		} catch (Exception e) {}
@@ -284,6 +301,7 @@ public class LogStatus{
 		int tag = CURRENT_TAG++;
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
 
+		// get from log
 		try {
 			disk.startRequest(Disk.READ, tag, HEADER_LOC, buffer);
 		} catch (Exception e) {}
@@ -309,6 +327,8 @@ public class LogStatus{
 		
 		disk.startRequest(Disk.WRITE, tag, HEADER_LOC, header);
 		cbt.waitForTag(tag);
+		
+		
 		// send commit to disk
 		byte[] commit = new byte[Disk.SECTOR_SIZE];
 		commit[0] = (byte) 'c';

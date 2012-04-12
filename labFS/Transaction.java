@@ -192,14 +192,6 @@ public class Transaction implements Serializable{
     // the k writes by this transaction.
     //
     public byte[] getSectorsForLog(){
-    	//decide on format for the header. -- include size/length/number of writes, pointer to first sector, etc.
-    	//create a byte array for the header, the writes, and the commit.
-    	/*int ah = write_list.size()*4 - 472;
-    	if(ah > 0) {
-    		ah = (write_list.size()*4 - 472)/512;
-    	} else {
-    		ah = 0;
-    	}*/
     	/*
          * Header
          * TranID number
@@ -221,13 +213,17 @@ public class Transaction implements Serializable{
     	
     	byte ret[] = new byte[(write_list.size() +2)*Disk.SECTOR_SIZE];
     	
+    	//add id
     	longToByte(id.getTranNum(),ret,0);
     	
+    	// add num sectors
     	int s = write_list.size();
     	intToByte(s,ret,8);
     	
+    	// add status
     	ret[12] = Status;
 
+    	// add sector data to ret[]
     	Iterator<Write> it = write_list.iterator();
     	Write temp = null;
     	int j = 0;
@@ -297,7 +293,7 @@ public class Transaction implements Serializable{
     // write in byte array. Used for writeback.
     //
     public int getUpdateI(int i, byte buffer[]){
-    	//lock.lock();
+    	
     	if (Status == Common.COMMITED) {
     		//go to the ith write, update buffer, return sec num
         	Write temp = write_list.get(i);
@@ -306,10 +302,10 @@ public class Transaction implements Serializable{
         					j < temp.cData.length; j++) {
         		buffer[j] = temp.cData[j];
         	}
-        	//lock.unlock();
+        	
         	return temp.secNum;
     	}
-    	//lock.unlock();
+    	
         return -1;
     }
     
@@ -317,7 +313,7 @@ public class Transaction implements Serializable{
     
     public boolean getUpdateS(int sec_num, byte buffer[]) {
     	lock.lock();
-    	if (true) { // Status == Common.COMMITED
+    	if (true) { 
 	    	Iterator<Write> iter = write_list.iterator();
 	    	Write temp;
 	    	while(iter.hasNext()) {
@@ -332,19 +328,6 @@ public class Transaction implements Serializable{
     	return false;
     }
     
-
-    /*
-     * Header
-     * TranID number
-     * number of updates
-     * Status - written to disk or not
-     *   
-     * 40th byte - secNum first update
-     * secNum second update
-     * ...
-     * secNum ith update 
-     */
-
     
     //
     // Parse a sector from the log that *may*

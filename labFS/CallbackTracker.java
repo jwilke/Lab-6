@@ -20,13 +20,14 @@ import java.util.concurrent.locks.Condition;
 
 public class CallbackTracker implements DiskCallback{
 	
-	
-	
 	SimpleLock lock;
 	HashMap<Integer, DiskResult> list;
 	ArrayList<Integer> dontWaits;
 	Condition tagBroadcaster;
 	
+	/**
+	 * Constructor
+	 */
 	public CallbackTracker() {
 		lock = new SimpleLock();
 		list = new HashMap<Integer, DiskResult>();
@@ -34,10 +35,13 @@ public class CallbackTracker implements DiskCallback{
 		tagBroadcaster = lock.newCondition();
 	}
 	
-	
+	/**
+	 * Called to add new finished request to tracker
+	 */
     public void requestDone(DiskResult result){
     	lock.lock();
     	
+    	// check if it is on dontwait list, if so ignore
     	if(dontWaits.contains(result.getTag())) {
     		dontWaits.remove(dontWaits.indexOf(result.getTag()));
     		lock.unlock();
@@ -59,6 +63,7 @@ public class CallbackTracker implements DiskCallback{
     //
     public DiskResult waitForTag(int tag) {
     	lock.lock();
+    	
         // check for tag in all list
     	while(!list.containsKey(tag)) {
     		// if not there wait
@@ -70,6 +75,7 @@ public class CallbackTracker implements DiskCallback{
     	}
     	
     	DiskResult ret = list.get(tag);
+    	
     	// if there: remove for list, return result
     	list.remove(tag);
     	lock.unlock();
@@ -81,6 +87,7 @@ public class CallbackTracker implements DiskCallback{
     //
     public Vector<DiskResult> waitForTags(Vector<Integer> tags){
     	lock.lock();
+    	// wait on all tags in vector
     	Iterator<Integer> iter = tags.iterator();
     	Vector<DiskResult> ret = new Vector<DiskResult>();
     	int ctag;
@@ -106,6 +113,8 @@ public class CallbackTracker implements DiskCallback{
     // if there are tags that we don't plan to wait for.
     // When these results arrive, drop them on the
     // floor.
+    //
+    // Wanted to write a floor class as a joke...not that funny though
     //
     public void dontWaitForTag(int tag){
     	lock.lock();
