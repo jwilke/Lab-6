@@ -48,10 +48,6 @@ public class LogStatus{
 		lock = new SimpleLock();
 		is_full = lock.newCondition();
 
-		//System.out.println("Disk: " + disk);
-		//System.out.println("CallbackTracker: " + cbt);
-		//System.out.println("WBL: " + wbl + "\n\n\n\n");
-		
 		start = START_LOG;
 		current = START_LOG;
 		bitmap = new byte[Common.ADISK_REDO_LOG_SECTORS/8];
@@ -59,14 +55,13 @@ public class LogStatus{
 			bitmap[i] = 0;
 		}
 	}
-	
+
 	public void recover(WriteBackList wbl) {
 		//set up off of old data
 		start = logStartPoint();
 		current = logCurrent();
 		//find the final commit
 		int last = findLastCommit();
-		System.out.println("Last: " + last);
 		// add all committe transactions to wbl
 		addTransactions(last, wbl);
 	}
@@ -76,46 +71,57 @@ public class LogStatus{
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
 		byte[] header = new byte[Disk.SECTOR_SIZE];
 		int beg = start;
-		boolean found = false;
+		byte[] commit = new byte[Disk.SECTOR_SIZE];
+		commit[0] = (byte) 'c';
+		commit[1] = (byte) 'o';
+		commit[2] = (byte) 'm';
+		commit[3] = (byte) 'm';
+		commit[4] = (byte) 'i';
+		commit[5] = (byte) 't';
 		
-		int l = last;
 		//loop through sectors
-		while ((beg != last) && cbt != null) {
+		while ((beg != last && beg != last+1) && cbt != null) {
+			
 			// examine header
 			int tag = CURRENT_TAG++;
 			try {
 				disk.startRequest(Disk.READ, tag, beg, header);
 			} catch (Exception e) {}
 			cbt.waitForTag(tag);
-			
+
 			// move to next sector
 			beg = (beg + 1) % Disk.ADISK_REDO_LOG_SECTORS;
-			if (!found) found = beg == last;
 			
+			if(Common.arrayEquals(commit, buffer)) {continue;}
+
 			// add sectors to Transaction
 			Transaction temp = Transaction.parseLogBytes(header);
 			for (int i = 0; i < Transaction.parseHeader(header); i++, beg = (beg + 1) % Disk.ADISK_REDO_LOG_SECTORS) {
-				//System.out.println(beg);
-				if (!found) found = beg == last;
 				tag = CURRENT_TAG++;
 				try {
 					disk.startRequest(Disk.READ, tag, beg, buffer);
 				} catch (Exception e) {}
 				cbt.waitForTag(tag);
-				//Common.printArray(buffer);
-				temp.addWrite(Common.byteToInt(header, Transaction.OFFSET + i), buffer);
+				temp.addWrite(Common.byteToInt(header, Transaction.OFFSET + (i*4)), buffer);
 			}
+
 			try {
 				temp.commit();
 			} catch (Exception e) {}
-			System.out.println(beg);
 			wbl.addCommitted(temp);
-			
+			beg = (beg + 1) % Disk.ADISK_REDO_LOG_SECTORS;
+
 		}
-		System.out.println("Start: " + start);
-		System.out.println("Current: " + current);
-		System.out.println("Last: " + l);
 		lock.unlock();
+	}
+
+	private void printlog(int last) throws IllegalArgumentException, IOException {
+		byte[] buffer = new byte[Disk.ADISK_REDO_LOG_SECTORS];
+		for (int i = start; i < last; i++) {
+			disk.startRequest(Disk.READ, i, i, buffer);
+			cbt.waitForTag(i);
+		}
+
 	}
 
 	private int findLastCommit() {
@@ -127,7 +133,6 @@ public class LogStatus{
 		commit[4] = (byte) 'i';
 		commit[5] = (byte) 't';
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
-		System.out.println("Recovery Stages");
 		int last = current;
 		while (last != start) {
 			int tag = CURRENT_TAG++;
@@ -135,14 +140,14 @@ public class LogStatus{
 				disk.startRequest(Disk.READ, tag, last, buffer);
 			} catch (Exception e) {}
 			cbt.waitForTag(tag);
-			if (commit.equals(buffer)) {
+			if (Common.arrayEquals(commit, buffer)) {
 				return last;
 			}
 			last--;
 		}
 		return last;
 	}
-	
+
 	public int getNextTag() {
 		lock.lock();
 		int tag = CURRENT_TAG++;
@@ -157,11 +162,11 @@ public class LogStatus{
 	public int reserveLogSectors(int nSectors)
 	{
 		lock.lock();
-		// TODO find a way to wait if log is full
 		// int oldCurent = current
 		int begin = current;
 		// current += nSectors
 		current = ((current + START_LOG + nSectors) % Common.ADISK_REDO_LOG_SECTORS) - START_LOG; 
+		
 		// set bitmap
 		setBits(begin, nSectors);
 		// return oldCurrrent
@@ -210,9 +215,8 @@ public class LogStatus{
 	public int writeBackDone(int startSector, int nSectors)
 	{
 		lock.lock();
-		// update start if startSector = start
-		if(startSector == start) 
-			start += nSectors;
+		// update start if startSector = start 
+		start = (start + nSectors) % Disk.ADISK_REDO_LOG_SECTORS;
 		// clear bits
 		freeBits(startSector, nSectors);
 		lock.unlock();
@@ -263,28 +267,30 @@ public class LogStatus{
 		lock.lock();
 		int tag = CURRENT_TAG++;
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
-		                         
+
 		try {
 			disk.startRequest(Disk.READ, tag, HEADER_LOC, buffer);
 		} catch (Exception e) {}
-		
+
 		if(cbt != null) cbt.waitForTag(tag);
 		int out = Common.byteToInt(buffer, 0);
 		lock.unlock();
 		return out;
 	}
-	
+
 	public int logCurrent() {
 		lock.lock();
+		
 		int tag = CURRENT_TAG++;
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
-		                         
+
 		try {
 			disk.startRequest(Disk.READ, tag, HEADER_LOC, buffer);
 		} catch (Exception e) {}
 		
 		if(cbt != null) cbt.waitForTag(tag);
 		int out = Common.byteToInt(buffer, 4);
+		
 		lock.unlock();
 		return out;
 	}
@@ -294,12 +300,13 @@ public class LogStatus{
 		current = (current + 1) % Common.ADISK_REDO_LOG_SECTORS;
 		// add commit to end
 		int location = reserveLogSectors(1);
-		
+
 		// send header to disk
 		int tag = CURRENT_TAG++;
 		byte[] header = new byte[Disk.SECTOR_SIZE];
 		Common.intToByte(start, header, 0);
 		Common.intToByte(current, header, 4);
+		
 		disk.startRequest(Disk.WRITE, tag, HEADER_LOC, header);
 		cbt.waitForTag(tag);
 		// send commit to disk
@@ -346,19 +353,19 @@ public class LogStatus{
 		t.is_equal(-1, ls1.bitmap[13]);
 		t.is_equal(-1, ls1.bitmap[14]);
 		t.is_equal(0, ls1.bitmap[15]);
-		
+
 		ls1.setBits(20*8, 4);
 		t.is_equal(0, ls1.bitmap[19]);
 		t.is_equal(-16, ls1.bitmap[20]);
 		t.is_equal(0, ls1.bitmap[21]);
-		
+
 		ls1.setBits(22*8 + 6, 16);
 		t.is_equal(0, ls1.bitmap[21]);
 		t.is_equal(3, ls1.bitmap[22]);
 		t.is_equal(-1, ls1.bitmap[23]);
 		t.is_equal(-4, ls1.bitmap[24]);
 		t.is_equal(0, ls1.bitmap[25]);
-		
+
 		ls1.setBits(126*8, 32);
 		t.is_equal(0, ls1.bitmap[125]);
 		t.is_equal(-1, ls1.bitmap[126]);
@@ -378,19 +385,19 @@ public class LogStatus{
 		t.is_equal(0, ls1.bitmap[13]);
 		t.is_equal(0, ls1.bitmap[14]);
 		t.is_equal(0, ls1.bitmap[15]);
-		
+
 		ls1.freeBits(20*8, 3);
 		t.is_equal(0, ls1.bitmap[19]);
 		t.is_equal(16, ls1.bitmap[20]);
 		t.is_equal(0, ls1.bitmap[21]);
-		
+
 		ls1.freeBits(22*8 + 6, 3);
 		t.is_equal(0, ls1.bitmap[21]);
 		t.is_equal(0, ls1.bitmap[22]);
 		t.is_equal(127, ls1.bitmap[23]);
 		t.is_equal(-4, ls1.bitmap[24]);
 		t.is_equal(0, ls1.bitmap[25]);
-		
+
 		ls1.freeBits(126*8, 24);
 		t.is_equal(0, ls1.bitmap[125]);
 		t.is_equal(0, ls1.bitmap[126]);
@@ -398,9 +405,9 @@ public class LogStatus{
 		t.is_equal(0, ls1.bitmap[0]);
 		t.is_equal(-1, ls1.bitmap[1]);
 		t.is_equal(0, ls1.bitmap[2]);
-		
-		
-		
+
+
+
 		// reserveLogSectors
 		t.set_method("reserveLogSectors(int)");
 		ls1.bitmap = new byte[Common.ADISK_REDO_LOG_SECTORS/8];
@@ -408,7 +415,7 @@ public class LogStatus{
 		t.is_equal(0, ls1.start, "start");
 		t.is_equal(1, ls1.current, "current");
 		t.is_equal(-128, ls1.bitmap[0], "bitmap");
-		
+
 		t.is_equal(1, ls1.reserveLogSectors(100));
 		t.is_equal(0, ls1.start);
 		t.is_equal(101, ls1.current);
@@ -426,7 +433,7 @@ public class LogStatus{
 		t.is_equal(-1, ls1.bitmap[11], "bitmap");
 		t.is_equal(-8, ls1.bitmap[12], "bitmap");
 		t.is_equal(0, ls1.bitmap[13], "bitmap");
-		
+
 		t.is_equal(101, ls1.reserveLogSectors(30));
 		t.is_equal(0, ls1.start, "Start");
 		t.is_equal(131, ls1.current, "current");
@@ -435,17 +442,17 @@ public class LogStatus{
 		t.is_equal(-1, ls1.bitmap[14], "bitmap");
 		t.is_equal(-1, ls1.bitmap[15], "bitmap");
 		t.is_equal(-32, ls1.bitmap[16], "bitmap");
-		
-		
-		
-		
-		
+
+
+
+
+
 		// writeBackDone
 		t.set_method("writeBackDone");
 		t.is_equal(1, ls1.writeBackDone(0, 1));
 		t.is_equal(1, ls1.start, "start");
 		t.is_equal(127, ls1.bitmap[0], "bitmap");
-		
+
 		t.is_equal(101, ls1.writeBackDone(1, 100));
 		t.is_equal(101, ls1.start);
 		t.is_equal(0, ls1.bitmap[0], "bitmap");
@@ -462,7 +469,7 @@ public class LogStatus{
 		t.is_equal(0, ls1.bitmap[11], "bitmap");
 		t.is_equal(7, ls1.bitmap[12], "bitmap");
 		t.is_equal(-1, ls1.bitmap[13], "bitmap");
-		
+
 		t.is_equal(131, ls1.writeBackDone(101,30));
 		t.is_equal(131, ls1.start, "Start");
 		t.is_equal(0, ls1.bitmap[12], "bitmap");
@@ -470,8 +477,8 @@ public class LogStatus{
 		t.is_equal(0, ls1.bitmap[14], "bitmap");
 		t.is_equal(0, ls1.bitmap[15], "bitmap");
 		t.is_equal(0, ls1.bitmap[16], "bitmap");
-		
-		
+
+
 		// recoverySectorsInUse
 		t.set_method("recoverySectorsInUse()");
 		ls1.recoverySectorsInUse(234, 700);
@@ -486,9 +493,9 @@ public class LogStatus{
 		ls1.recoverySectorsInUse(950, 100);
 		t.is_equal(950, ls1.start, "start");
 		t.is_equal(26, ls1.current, "current");
-		
-		
-		
+
+
+
 		/*
 		// logStartPoint
 		t.set_method("logStartPoint()");
@@ -500,7 +507,7 @@ public class LogStatus{
 		t.is_equal(923, ls1.logStartPoint(), "start");
 		ls1.recoverySectorsInUse(950, 100);
 		t.is_equal(950, ls1.logStartPoint(), "start");
-		
+
 		// logCurrent
 		t.set_method("logStartPoint()");
 		ls1.recoverySectorsInUse(234, 700);
@@ -511,9 +518,9 @@ public class LogStatus{
 		t.is_equal(1023, ls1.logCurrent(), "current");
 		ls1.recoverySectorsInUse(950, 100);
 		t.is_equal(26, ls1.logCurrent(), "current");
-		*/
-		
-		
+		 */
+
+
 		// writeCommit TODO
 
 

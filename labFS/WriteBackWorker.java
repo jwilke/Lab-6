@@ -44,7 +44,8 @@ public class WriteBackWorker extends Thread{
 				cbt.waitForTag(tag);
 			}
 			wbl.removeNextWriteback();
-			log.recoverySectorsInUse(t.recallLogSectorStart(), t.recallLogSectorNSectors());
+			//log.recoverySectorsInUse(t.recallLogSectorStart(), t.recallLogSectorNSectors());
+			log.writeBackDone(t.recallLogSectorStart(), t.recallLogSectorNSectors()+1);
 		}
 	}
 }

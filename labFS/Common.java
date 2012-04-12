@@ -40,7 +40,19 @@ public class Common{
   }
   
   public static int byteToInt(byte buffer[], int offset) {
-	  return (((int)buffer[offset]) << 24) | (((int)buffer[offset+1]) << 16) | (((int)buffer[offset+2]) << 8) | ((int)buffer[offset+3]);
+	  int x = (int) buffer[offset];
+	  x &= 0xff;
+	  int out = x << 24;
+	  x = (int) buffer[offset+1];
+	  x &= 0xff;
+	  out = out | (x << 16);
+	  x = (int) buffer[offset+2];
+	  x &= 0xff;
+	  out = out | (x << 8);
+	  x = (int) buffer[offset+3];
+	  x &= 0xff;
+	  out = out | (x);
+	  return out;
   }
   
   public static void printArray(byte[] b) {

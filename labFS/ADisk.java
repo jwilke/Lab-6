@@ -53,7 +53,7 @@ public class ADisk{
 			e.printStackTrace();
 		}
 		byte[] formatbuffer = new byte[Disk.SECTOR_SIZE];
-
+		
 		if(format) {
 			Vector<Integer> tags = new Vector<Integer>();
 			for(int i = 0; i < disk.NUM_OF_SECTORS; i++) {
@@ -70,7 +70,7 @@ public class ADisk{
 			}
 			cbt.waitForTags(tags);
 		}
-
+		
 		
 		log = new LogStatus(disk, cbt);
 		if(!format) log.recover(wbl);
@@ -169,12 +169,12 @@ public class ADisk{
 			disk.startRequest(disk.WRITE, temp_tag, (logstart+i)%disk.ADISK_REDO_LOG_SECTORS, sector);
 			tags.add(temp_tag);
 		}
-		//System.out.println("T-Started Req: " + thread);
+		
 		// issue barrier to log
 		disk.addBarrier();
-		//System.out.println("T-Barrior: " + thread);
+		
 		cbt.waitForTags(tags);
-		//System.out.println("T: " + thread);
+		
 		// issue commit to log
 		log.writeCommit();
 		// move it from atl.remove(tid) to wbl.addCommitted()
@@ -292,7 +292,6 @@ public class ADisk{
 			throw new IllegalArgumentException("buffer size less then sector size");
 		}
 		if (sectorNum < Disk.ADISK_REDO_LOG_SECTORS+1 || sectorNum > Disk.NUM_OF_SECTORS) {
-			System.out.println(sectorNum);
 			throw new IndexOutOfBoundsException("writing to incorrect sector");
 		}
 
@@ -322,7 +321,7 @@ public class ADisk{
 			t.is_equal(15359, ad1.getNSectors());
 		}
 
-		
+	
 		// beginTransaction
 		t.set_method("beginTransaction");
 		TransID tid1 = ad1.beginTransaction();
@@ -423,7 +422,9 @@ public class ADisk{
 		Common.intToByte(0, buffer9, 0);
 		Common.intToByte(3, buffer9, 4);
 
+		
 		tran1 = ad1.atl.get(tid1);
+		//Transaction tran1b  = tran1;
 		t.is_true(tran1 != null);
 		ad1.commitTransaction(tid1);
 		tran1 = ad1.atl.get(tid1);
@@ -464,10 +465,9 @@ public class ADisk{
 		ad1.disk.startRequest(Disk.READ, 2000, Disk.ADISK_REDO_LOG_SECTORS, buffer0);
 		ad1.cbt.waitForTag(2000);
 		t.is_equal(buffer9, buffer0);
-		ad1.wbl.removeNextWriteback();
 
-
-
+		ad1.log.recoverySectorsInUse(0, 0);
+		
 		tid1 = ad1.beginTransaction();
 		ad1.writeSector(tid1, 2001, buffer1);
 		ad1.commitTransaction(tid1);
@@ -496,16 +496,16 @@ public class ADisk{
 		ad1 = new ADisk(false);
 		
 		t.is_equal(3, ad1.wbl.list.size());
-		/*
+		
 		ad1.readSector(tid1, 2001, buffer0);
 		t.is_equal(buffer1, buffer0);
 		ad1.readSector(tid2, 2002, buffer0);
 		t.is_equal(buffer2, buffer0);
 		ad1.readSector(tid3, 2003, buffer0);
 		t.is_equal(buffer3, buffer0);
-		*/
 		
-		/*
+		
+		
 		System.out.println("Testing ADisk - Test Set 2");
 		TESTING = false;
 		ad1 = new ADisk(true);
@@ -541,7 +541,7 @@ public class ADisk{
 		ad1.readSector(tid1, 2003, buffer0);
 		t.is_equal(buffer3, buffer0);
 
-
+/*
 		for (int i = 0; i < 100; i++) {
 			ADiskTestThread test1 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+1, 2, (byte) ('a'));
 			ADiskTestThread test2= new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+2, 2, (byte) ('b')); 
