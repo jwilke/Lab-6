@@ -1,6 +1,9 @@
 import java.io.IOException;
 
-
+/**
+ * used to test ADisk with multiple threads
+ *
+ */
 public class ADiskTestThread extends Thread{
 	int base_sector;
 	int mult_sector;
@@ -39,7 +42,6 @@ public class ADiskTestThread extends Thread{
 				
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			index += mult_sector;

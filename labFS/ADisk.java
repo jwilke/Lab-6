@@ -49,34 +49,35 @@ public class ADisk{
 		try {
 			disk = new Disk(cbt);
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		byte[] formatbuffer = new byte[Disk.SECTOR_SIZE];
 		
+		
+		// write 0's to everything
 		if(format) {
 			Vector<Integer> tags = new Vector<Integer>();
-			for(int i = 0; i < disk.NUM_OF_SECTORS; i++) {
+			for(int i = 0; i < Disk.NUM_OF_SECTORS; i++) {
 				tags.add(i);
 				try {
+					// send write to disk
 					disk.startRequest(Disk.WRITE, i, i, formatbuffer);
 				} catch (IllegalArgumentException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
+			// make sure it completes
 			cbt.waitForTags(tags);
 		}
 		
-		
+		// start the log
 		log = new LogStatus(disk, cbt);
+		// recover if not formatting
 		if(!format) log.recover(wbl);
-		// else
-		// create new disk from log passing cbt
 
+		// start the worker that sends everything to disk
 		startWorker();
 	}
 
@@ -148,41 +149,46 @@ public class ADisk{
 	public void commitTransaction(TransID tid, int thread) 
 	throws IOException, IllegalArgumentException
 	{
-		
+		// get the current transactions
 		Transaction temp = atl.get(tid);
 		if(temp == null) {
 			throw new IllegalArgumentException();
 		}
+		
 		// change status
 		temp.commit();
+		
 		// ask log status where to put the log and find place in log
 		int logstart = log.reserveLogSectors(temp.getNUpdatedSectors());
+		
 		// issue writes to log
 		byte[] dataToWrite = temp.getSectorsForLog();
 		byte[] sector = new byte[Disk.SECTOR_SIZE];
-
 		Vector<Integer> tags = new Vector<Integer>();
 		int temp_tag;
+		
 		for(int i = 0; i < temp.getNUpdatedSectors()+1; i++) {
 			sector = Transaction.copyOfRange(dataToWrite, i*Disk.SECTOR_SIZE, (i+1)*Disk.SECTOR_SIZE);
 			temp_tag = log.getNextTag();
-			disk.startRequest(disk.WRITE, temp_tag, (logstart+i)%disk.ADISK_REDO_LOG_SECTORS, sector);
+			disk.startRequest(Disk.WRITE, temp_tag, (logstart+i)%Disk.ADISK_REDO_LOG_SECTORS, sector);
 			tags.add(temp_tag);
 		}
 		
-		// issue barrier to log
+		// issue barrier to log - so that we know that all other writes are done after this
 		disk.addBarrier();
-		
+		// wait to make sure everything gets done in log
 		cbt.waitForTags(tags);
 		
 		// issue commit to log
 		log.writeCommit();
+		
 		// move it from atl.remove(tid) to wbl.addCommitted()
 		atl.remove(tid);
 		wbl.addCommitted(temp);
 	}
 
 	public void commitTransaction(TransID tid) throws IllegalArgumentException, IOException {
+		// used for testing
 		commitTransaction(tid, -1);
 	}
 
@@ -199,14 +205,15 @@ public class ADisk{
 	public void abortTransaction(TransID tid) 
 	throws IllegalArgumentException
 	{
+		// get transaction
 		Transaction t = atl.remove(tid);
 		if(t == null)
 			throw new IllegalArgumentException("TransID does not refer to active transaction");
 
+		// change status
 		try {
 			t.abort();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -551,6 +558,12 @@ public class ADisk{
 			ADiskTestThread test6 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+6, 8, (byte) ('a')); 
 			ADiskTestThread test7 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+7, 8, (byte) ('a')); 
 			ADiskTestThread test8 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+8, 8, (byte) ('a'));
+=======
+		/* single simple multithreaded run
+		for (int i = 0; i < 100; i++) {
+			ADiskTestThread test1 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+1, 2, (byte) ('a'));
+			ADiskTestThread test2= new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+2, 2, (byte) ('b')); 
+>>>>>>> cc5c3d2b3bf1bff496392e7c66f9374afc5c2371
 			test1.start();
 			test2.start();
 			test3.start();
