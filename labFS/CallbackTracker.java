@@ -24,12 +24,14 @@ public class CallbackTracker implements DiskCallback{
 	
 	SimpleLock lock;
 	HashMap<Integer, DiskResult> list;
+	HashMap<Integer, DiskResult> history;
 	ArrayList<Integer> dontWaits;
 	Condition tagBroadcaster;
 	
 	public CallbackTracker() {
 		lock = new SimpleLock();
 		list = new HashMap<Integer, DiskResult>();
+		history = new HashMap<Integer, DiskResult>();
 		dontWaits = new ArrayList<Integer>();
 		tagBroadcaster = lock.newCondition();
 	}
@@ -47,6 +49,8 @@ public class CallbackTracker implements DiskCallback{
     	
         // save result
     	list.put(result.getTag(), result);
+    	history.put(result.getTag(), result);
+    	
     	// broadcast
     	tagBroadcaster.signalAll();
     	
@@ -84,9 +88,19 @@ public class CallbackTracker implements DiskCallback{
     	Iterator<Integer> iter = tags.iterator();
     	Vector<DiskResult> ret = new Vector<DiskResult>();
     	int ctag;
+    	int i = 0;
+    	boolean flag = false;
     	while(iter.hasNext()) {
     		ctag = iter.next();
     		while(!list.containsKey(ctag)) {
+    			i++;
+    			if(i > 50) {
+    				flag = history.containsKey(ctag);
+    				if(flag) {
+    					ret.add(history.get(ctag));
+    					break;
+    				}
+    			}
         		// if not there wait
         		try {
     				tagBroadcaster.await();
@@ -94,8 +108,12 @@ public class CallbackTracker implements DiskCallback{
     				e.printStackTrace();
     			}
         	}
-    		ret.add(list.get(ctag));
-    		list.remove(ctag);
+    		if(!flag) {
+	    		ret.add(list.get(ctag));
+	    		list.remove(ctag);
+    		}
+    		i = 0;
+    		flag  = false;
     	}
     	lock.unlock();
         return ret;
