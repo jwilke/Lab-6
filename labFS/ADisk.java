@@ -541,23 +541,42 @@ public class ADisk{
 		ad1.readSector(tid1, 2003, buffer0);
 		t.is_equal(buffer3, buffer0);
 
-/*
-		for (int i = 0; i < 100; i++) {
-			ADiskTestThread test1 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+1, 2, (byte) ('a'));
-			ADiskTestThread test2= new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+2, 2, (byte) ('b')); 
+		/*ad1 = new ADisk(true);
+		for (int i = 0; i < 80; i++) {
+			ADiskTestThread test1 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+1, 8, (byte) ('a'));
+			ADiskTestThread test2 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+2, 8, (byte) ('a'));
+			ADiskTestThread test3 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+3, 8, (byte) ('a'));
+			ADiskTestThread test4 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+4, 8, (byte) ('a')); 
+			ADiskTestThread test5 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+5, 8, (byte) ('a'));
+			ADiskTestThread test6 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+6, 8, (byte) ('a')); 
+			ADiskTestThread test7 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+7, 8, (byte) ('a')); 
+			ADiskTestThread test8 = new ADiskTestThread(ad1, Disk.ADISK_REDO_LOG_SECTORS+8, 8, (byte) ('a'));
 			test1.start();
 			test2.start();
+			test3.start();
+			test4.start();
+			test5.start();
+			test6.start();
+			test7.start();
+			test8.start();
 
 			try {
 				test1.join();
 				test2.join();
+				test3.join();
+				test4.join();
+				test5.join();
+				test6.join();
+				test7.join();
+				test8.join();
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		}
+			System.out.println("finished test: " + i + "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+		}*/
 
-		*/
+		
 
 	}
 }
