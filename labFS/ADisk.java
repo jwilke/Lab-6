@@ -125,7 +125,7 @@ public class ADisk{
 	// Then, mark the log to indicate that the specified
 	// transaction has been committed. 
 	//
-	// Then wait until the "commit" is safely on disk
+	// Then wait until the "commithttp://www.cs.utexas.edu/users/dahlin/Classes/439/syllabus.html" is safely on disk
 	// (in the log).
 	//
 	// Then take some action to make sure that eventually

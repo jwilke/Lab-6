@@ -17,8 +17,8 @@ LAB3_NAME := cs439-labHierFS
 JAVAC = javac
 JFLAGS = -g
 JAVA_SRCS = ActiveTransactionList.java Common.java Disk.java DiskWorker.java PTree.java \
-	SimpleLock.java WriteBackList.java ADisk.java DirEnt.java DiskResult.java FlatFS.java ResourceException.java Transaction.java \
-	CallbackTracker.java DiskCallback.java DiskUnit.java LogStatus.java RFS.java TransID.java WorkProducer.java WriteBackWorker.java Tester.java 
+SimpleLock.java WriteBackList.java ADisk.java DirEnt.java DiskResult.java FlatFS.java ResourceException.java Transaction.java \
+CallbackTracker.java DiskCallback.java DiskUnit.java LogStatus.java RFS.java TransID.java WorkProducer.java WriteBackWorker.java Tester.java
 
 CLASSES = $(JAVA_SRCS:.java=.class) $(OTHER_CLASSES)
 
@@ -43,7 +43,7 @@ handin-1: handin.tar
 	echo "Turning in handin.tar containing the following files:"
 	tar tf handin.tar
 	$(TURNIN) --submit $(GRADER) $(LAB1_NAME) handin.tar
-	
+
 
 handin-2: handin.tar
 	echo "FIX MAKEFILE TO INCLUDE THE TA user ID for the cs machines"
