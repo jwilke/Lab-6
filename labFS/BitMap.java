@@ -19,17 +19,17 @@ public class BitMap {
 		return !((bits[bmsector][bmbyte] & (1 << bmbit)) == 0);
 	}
 
-	public void set_sector(int begin) {
-		int curPart = begin / (Disk.SECTOR_SIZE * 8);
-		int curByte = (begin % (Disk.SECTOR_SIZE * 8)) / 8;
-		int curBit = begin % 8;
+	public void set_sector(int sector) {
+		int curPart = sector / (Disk.SECTOR_SIZE * 8);
+		int curByte = (sector % (Disk.SECTOR_SIZE * 8)) / 8;
+		int curBit = sector % 8;
 		bits[curPart][curByte] = (byte) (bits[curPart][curByte] | (1 << curBit));
 	}
 	
-	public void free_sector(int begin) {
-		int curPart = begin / (Disk.SECTOR_SIZE * 8);
-		int curByte = (begin % (Disk.SECTOR_SIZE * 8)) / 8;
-		int curBit = begin % 8;
+	public void free_sector(int sector) {
+		int curPart = sector / (Disk.SECTOR_SIZE * 8);
+		int curByte = (sector % (Disk.SECTOR_SIZE * 8)) / 8;
+		int curBit = sector % 8;
 		bits[curPart][curByte] = (byte) (bits[curPart][curByte] & (-1 ^ (1 << curBit)));
 	}
 	
@@ -41,13 +41,16 @@ public class BitMap {
 					byte comp = bits[i][j];
 					while( bit < 8) {
 						if( (((byte)(1<<bit)) & comp) == 0 ) {
-							return (i*(Disk.SECTOR_SIZE * 8)) + (j*8) + bit;
+							int ret = (i*(Disk.SECTOR_SIZE * 8)) + (j*8) + bit;
+							bits[i][j] = (byte) (bits[i][j] | (1 << bit));
+							return ret;
 						}
 						bit++;
 					}
 				}
 			}
 		}
+		
 		
 		return -1;
 	}

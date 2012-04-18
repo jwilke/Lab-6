@@ -1,9 +1,12 @@
+import java.util.ArrayList;
+
 public class TNode {
 	int[] ptrs; //sector numbers 32 bytes
 	int TNum;
 	int height; // 4 bytes
 	int total_blocks;
 	byte[] metadata; // 64 bytes
+	// Total			100
 
 
 	public TNode(int num) {
@@ -50,5 +53,33 @@ public class TNode {
 		}
 		
 		return ret;
+	}
+	
+	public void write_to_buffer(byte[] buffer) {
+		int spot = TNum % 5;
+		// write ptrs
+		for(int i = 0; i < ptrs.length; i++){
+			Common.intToByte(ptrs[i], buffer, 100*spot+(i*4));
+		}
+		// write height
+		Common.intToByte(height, buffer, 100*spot + 32);
+		// write meta
+		for(int i = 0; i < metadata.length; i++) {
+			buffer[100*spot+36+i] = metadata[i];
+		}
+	}
+	
+	public ArrayList<Integer> free_blocks() {
+		ArrayList<Integer> freed_secs = new ArrayList<Integer>();
+		for(int i = 0; i < ptrs.length - 1; i++) {
+			if(ptrs[i] < PTree.TNODE_LOCTION) freed_secs.add(ptrs[i]); // TODO update overhead length
+			ptrs[i] = 0;
+		}
+		
+		if(ptrs[7] != 0) {
+			// TODO go through indirect
+		}
+		
+		return freed_secs;
 	}
 }

@@ -10,6 +10,7 @@
 
 import java.io.IOException;
 import java.io.EOFException;
+import java.util.ArrayList;
 import java.util.concurrent.locks.Condition;
 
 public class PTree{
@@ -150,7 +151,15 @@ public class PTree{
 		tnodes[tnum] = new TNode(tnum);
 		
 		// add write to transaction
+		byte[] buffer = new byte[Disk.SECTOR_SIZE];
+		int begin = (tnum/5) *5; // TODO change for updates
+		for(int i = begin; i < 5; i++) {
+			if(tnodes[i] != null) tnodes[i].write_to_buffer(buffer);
+		}
+		assert(buffer[501] == 0);
+		
 		// disk.writeSector(xid, sectorNum, buffer)
+		disk.writeSector(xid, TNODE_LOCTION + begin, buffer);
 		
 		// return tnum (the location of the tnode)
 		return -tnum;
@@ -160,7 +169,19 @@ public class PTree{
 	throws IOException, IllegalArgumentException
 	{
 		// free in all block used by tree in bit map
-		// free tnode in bit map
+		TNode current_node = tnodes[tnum];
+		tnodes[tnum] = null;
+		
+		// free blocks and free blocks in bitmap
+		ArrayList<Integer> list = current_node.free_blocks();
+		//int indirect ptr
+		
+		// zero the block that has that tnode
+		byte[] buffer = new byte[Disk.SECTOR_SIZE];
+		int begin = (tnum/5) *5; // TODO change for updates
+		for(int i = begin; i < 5; i++) {
+			if(tnodes[i] != null) tnodes[i].write_to_buffer(buffer);
+		}
 	}
 
 	/**
