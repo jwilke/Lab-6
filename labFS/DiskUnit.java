@@ -59,7 +59,7 @@ public class DiskUnit implements DiskCallback{
     System.out.println("Read data from some");
     System.exit(0);*/
 		Tester t = new Tester();
-		System.out.println("Testing TranID");
+		/*System.out.println("Testing TranID");
 		TransID id = new TransID();
 		id.unit(t);
 		
@@ -88,6 +88,9 @@ public class DiskUnit implements DiskCallback{
 		ADisk.unit(t, true);
 		//for(int i = 0; i < 1000; i++)
 			//ADisk.unit(t, false);
+			 * */
+		System.out.println("Testing BitMap");
+		BitMap.unit(t);
 		
 		System.out.println();
 		t.close();
