@@ -10,6 +10,16 @@ public class BitMap {
 		sec_div = ts/(Disk.SECTOR_SIZE * 8);
 		bits = new byte[sec_div][Disk.SECTOR_SIZE];
 	}
+	
+	public BitMap(int ts, int first_blocks) {
+		total_sectors = ts;
+		
+		sec_div = ts/(Disk.SECTOR_SIZE * 8);
+		bits = new byte[sec_div][Disk.SECTOR_SIZE];
+		for(int i = 0; i < first_blocks; i++) {
+			set_sector(i);
+		}
+	}
 
 	public boolean get_sector(int n) {
 		int bmsector = n / (Disk.SECTOR_SIZE * 8);
