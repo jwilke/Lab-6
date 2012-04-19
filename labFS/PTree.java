@@ -259,3 +259,16 @@ public class PTree{
 
 
 }
+
+/**
+ * todo Finish tnode & inode
+ * inode -
+ * write_to_buffer
+ *  build_from_buffer
+ *  rebuild free_blocks
+ *  getBlocks
+ *  addBlock
+ *  
+ * Tnode - done.
+ * all of ptree
+ */
