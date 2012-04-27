@@ -220,7 +220,7 @@ public class PTree{
 	}
 
 	public TNode create_TNode(TransID xid, int tnum) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
-		int begin = (tnum/TNODES_PER_SECT) *TNODES_PER_SECT;
+		int begin = (tnum/TNODES_PER_SECT);
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
 
 		// free in all block used by tree in bit map
@@ -420,8 +420,10 @@ public class PTree{
 
 
 		int size = pt1.bitMap.free_sectors;
+		
+		pt1.writeData(xid1, 0, 0, data);
+		
 		for(int i = 511; i >= 0; i--) {
-			pt1.writeData(xid1, i, 0, data);
 			/*pt1.writeData(xid1, i, 1, data);
 			pt1.writeData(xid1, i, 2, data);
 			pt1.writeData(xid1, i, 3, data);*/

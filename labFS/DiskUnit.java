@@ -89,12 +89,12 @@ public class DiskUnit implements DiskCallback{
 		//for(int i = 0; i < 1000; i++)
 			//ADisk.unit(t, false);
 			 * */
-		System.out.println("Testing BitMap");
+		/*System.out.println("Testing BitMap");
 		BitMap.unit(t);
 		System.out.println("Testing TNode");
 		TNode.unit(t);
 		System.out.println("Testing Internal Node");
-		InternalNode.unit(t);
+		InternalNode.unit(t);*/
 		System.out.println("Testing PTree");
 		PTree.unit(t);
 		

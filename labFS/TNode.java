@@ -224,7 +224,7 @@ public class TNode {
 	public static void unit(Tester t) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
 		t.set_object("TNode");
 		
-		ADisk disk = new ADisk(true);
+		ADisk disk = new ADisk(false);
 		TransID xid = disk.beginTransaction();
 		
 		
