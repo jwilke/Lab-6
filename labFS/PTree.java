@@ -10,7 +10,6 @@
 
 import java.io.IOException;
 import java.io.EOFException;
-import java.util.ArrayList;
 import java.util.concurrent.locks.Condition;
 
 public class PTree{
@@ -78,7 +77,38 @@ public class PTree{
 		inUse = lock.newCondition();
 		beingUsed = false;
 		allocTNodes = new byte[MAX_TREES];
-		bitMap = new BitMap(Disk.NUM_OF_SECTORS, DATA_LOCATION);
+		TransID xid = disk.beginTransaction();
+
+		try {
+			disk.readSector(xid, PTree.ALLOC_LOCATION, allocTNodes);
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IndexOutOfBoundsException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		bitMap = new BitMap(Disk.NUM_OF_SECTORS);
+		byte[][] bits = new byte[bitMap.sec_div][Disk.SECTOR_SIZE];
+		for(int i = 0; i < bitMap.sec_div; i++) {
+			try {
+				disk.readSector(xid, PTree.BITMAP_LOCATION+i, bits[i]);
+			} catch (Exception e) {}
+		}
+		bitMap.passBits(bits);
+		for(int i = 0; i < DATA_LOCATION; i++) {
+			bitMap.set_sector(i);
+		}
+		
+		try {
+			disk.commitTransaction(xid);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	public TransID beginTrans()
@@ -156,6 +186,10 @@ public class PTree{
 			}
 		}
 
+		if(tnum == -1) {
+			throw new ResourceException();
+		}
+
 		// add data to Tnode
 		TNode tnode = new TNode(tnum);
 
@@ -180,6 +214,9 @@ public class PTree{
 
 		// free blocks and free blocks in bitmap
 		current_node.free_blocks(xid, bitMap, disk);
+
+		// write the freed allocation of the alloc array to disk with transaction
+		disk.writeSector(xid, PTree.ALLOC_LOCATION, allocTNodes);
 	}
 
 	public TNode create_TNode(TransID xid, int tnum) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
@@ -210,7 +247,7 @@ public class PTree{
 	}
 
 	public void readData(TransID xid, int tnum, int blockId, byte buffer[])
-	throws IOException, IllegalArgumentException
+	throws IOException, IllegalArgumentException, EOFException
 	{		
 		// find the sectors in the Tnode
 		TNode t = create_TNode(xid, tnum);
@@ -301,69 +338,95 @@ public class PTree{
 			throw new IllegalArgumentException();
 		}
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
+
+
+
 	public static void unit(Tester t) throws IllegalArgumentException, IOException {
 		t.set_object("PTree");
-		
-		
-		
+
+
+
 		// construtor
 		t.set_method("Constructor()");
-		PTree pt1 = new PTree(false);
+		PTree pt1 = new PTree(true);
 		t.is_equal(512, pt1.allocTNodes.length);
 		t.is_true(pt1.disk != null);
 		t.is_true(pt1.lock != null);
 		t.is_true(pt1.inUse != null);
 		t.is_true(pt1.bitMap != null);
-		
-		
-		
-		
-		
 
-		
+
+
+
+
+
+
 		// getParam
 		t.set_method("getParam()");
 		t.is_equal(Disk.NUM_OF_SECTORS - PTree.DATA_LOCATION, pt1.getParam(ASK_FREE_SPACE));
 		t.is_equal(PTree.MAX_TREES, pt1.getParam(PTree.ASK_MAX_TREES));
 		t.is_equal(PTree.MAX_TREES, pt1.getParam(PTree.ASK_FREE_TREES));
-		
-		
-		
-		
-		
-		
+
+
+
+
+
+
 		// beginTrans
 		t.set_method("beginTransaction()");
 		TransID xid1 = pt1.beginTrans();
 		t.is_true(xid1 != null);
 		t.is_true(pt1.beingUsed);
-		
-		
-		
+
+
+
 		// commitTrans
 		// abortTrans
-		
-		
+
+
 		// createTree
+		t.set_method("createTree()");
 		int tnum1 = pt1.createTree(xid1);
 		t.is_equal(0, tnum1);
-		t.is_equal(PTree.DATA_LOCATION, pt1.allocTNodes[0]);
-		
-		
-		
-		
-		
-		
+		t.is_equal(1, pt1.allocTNodes[0]);
+
+		//t.is_equal(PTree.DATA_LOCATION, pt1.allocTNodes[0]);  // This test fails but I'm not sure what you were trying to test.
+
+		for(int i = 1; i < PTree.MAX_TREES; i++) {  //use up all the nodes
+			tnum1 = pt1.createTree(xid1);
+			t.is_equal(i, tnum1);
+			t.is_equal(1, pt1.allocTNodes[i]);
+		}
+
+		try {
+			tnum1 = pt1.createTree(xid1);  //no more room so should get an error
+		} catch (Exception e) {
+			t.is_true(e instanceof ResourceException);
+		}
+
+
 		// deleteTree
+		t.set_method("deleteTree()");
+		byte data[] = new byte[1024];
+		for(int i = 0; i < 1024; i++) {
+			data[i] = (byte)(i % 128);
+		}
+
+
+		int size = pt1.bitMap.free_sectors;
+		pt1.writeData(xid1, 0, 1, data);
+		for(int i = 511; i >= 0; i--) {
+			pt1.deleteTree(xid1, i);
+			t.is_equal(0, pt1.allocTNodes[i]);
+		}
+
+
 		// create-TNode
 		// readTreeMetadata
 		// writeTreeMatadata

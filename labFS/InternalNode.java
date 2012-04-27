@@ -212,6 +212,9 @@ public class InternalNode {
 		// addBlock
 		ADisk disk = new ADisk(false);
 		BitMap bm = new BitMap(Disk.NUM_OF_SECTORS);
+		for(int i = 0; i < PTree.DATA_LOCATION; i++) {
+			bm.set_sector(i);
+		}
 		TransID xid = disk.beginTransaction();
 		in1.addBlock(xid, 2002, bm, 0, 1, disk);
 		t.is_equal(1, in1.height);

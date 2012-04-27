@@ -1,5 +1,4 @@
 import java.io.IOException;
-import java.util.ArrayList;
 
 public class TNode {
 	int[] ptrs; //sector numbers 32 bytes
@@ -280,7 +279,10 @@ public class TNode {
 		
 		
 		t.set_method("addBlock() - Data Blocks");
-		BitMap bm = new BitMap(16384, 1025);
+		BitMap bm = new BitMap(16384);
+		for(int i = 0; i < PTree.DATA_LOCATION; i++) {
+			bm.set_sector(i);
+		}
 		int sect = bm.first_free_sector();
 		tn1.addBlock(xid, sect, bm, disk);
 		t.is_equal(1, tn1.total_blocks);

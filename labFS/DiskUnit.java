@@ -95,6 +95,8 @@ public class DiskUnit implements DiskCallback{
 		TNode.unit(t);
 		System.out.println("Testing Internal Node");
 		InternalNode.unit(t);
+		System.out.println("Testing PTree");
+		PTree.unit(t);
 		
 		System.out.println();
 		t.close();
