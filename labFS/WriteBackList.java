@@ -232,5 +232,9 @@ public class WriteBackList{
     		System.out.print(b[i] + ", ");
     	System.out.println(b[b.length-1] + "]");
     }
+
+	public boolean is_empty() {
+		return list.size() == 0;
+	}
     
 }
