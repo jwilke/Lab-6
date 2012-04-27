@@ -67,7 +67,7 @@ public class TNode {
 	public void writeBlock(TransID xid, int blockID, byte[] buffer, ADisk disk, BitMap bitmap) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
 		int sect = -1;
 		// increase size if needed
-		while(blockID > total_blocks) {
+		while(blockID >= total_blocks) {
 			sect = bitmap.first_free_block();
 			addBlock(xid, sect, bitmap, disk);
 		}
@@ -224,12 +224,8 @@ public class TNode {
 	public static void unit(Tester t) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
 		t.set_object("TNode");
 		
-		ADisk disk = new ADisk(false);
+		ADisk disk = new ADisk(true);
 		TransID xid = disk.beginTransaction();
-		
-		
-		
-		
 		
 		
 		
@@ -279,10 +275,8 @@ public class TNode {
 		
 		
 		t.set_method("addBlock() - Data Blocks");
-		BitMap bm = new BitMap(16384);
-		for(int i = 0; i < PTree.DATA_LOCATION; i++) {
-			bm.set_sector(i);
-		}
+		BitMap bm = new BitMap(16384, PTree.DATA_LOCATION);
+		
 		int sect = bm.first_free_sector();
 		tn1.addBlock(xid, sect, bm, disk);
 		t.is_equal(1, tn1.total_blocks);

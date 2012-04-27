@@ -354,7 +354,7 @@ public class PTree{
 
 		// construtor
 		t.set_method("Constructor()");
-		PTree pt1 = new PTree(true);
+		PTree pt1 = new PTree(false);
 		t.is_equal(512, pt1.allocTNodes.length);
 		t.is_true(pt1.disk != null);
 		t.is_true(pt1.lock != null);
@@ -420,8 +420,11 @@ public class PTree{
 
 
 		int size = pt1.bitMap.free_sectors;
-		pt1.writeData(xid1, 0, 1, data);
 		for(int i = 511; i >= 0; i--) {
+			pt1.writeData(xid1, i, 0, data);
+			/*pt1.writeData(xid1, i, 1, data);
+			pt1.writeData(xid1, i, 2, data);
+			pt1.writeData(xid1, i, 3, data);*/
 			pt1.deleteTree(xid1, i);
 			t.is_equal(0, pt1.allocTNodes[i]);
 		}
@@ -434,6 +437,6 @@ public class PTree{
 		t.set_method("getMaxDataBlockId");
 		// readData
 		// writeData
-
+		pt1.commitTrans(xid1);
 	}
 }
