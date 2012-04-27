@@ -1,19 +1,20 @@
 
 public class BitMap {
-	private byte bits[][];
+	byte bits[][];
 	int total_sectors;
 	int sec_div;
+	int free_sectors;
 
 	public BitMap(int ts) {
 		total_sectors = ts;
-		
+		free_sectors = ts;
 		sec_div = ts/(Disk.SECTOR_SIZE * 8);
 		bits = new byte[sec_div][Disk.SECTOR_SIZE];
 	}
 	
 	public BitMap(int ts, int first_blocks) {
 		total_sectors = ts;
-		
+		free_sectors = ts;
 		sec_div = ts/(Disk.SECTOR_SIZE * 8);
 		bits = new byte[sec_div][Disk.SECTOR_SIZE];
 		for(int i = 0; i < first_blocks; i++) {
@@ -34,6 +35,7 @@ public class BitMap {
 		int curByte = (sector % (Disk.SECTOR_SIZE * 8)) / 8;
 		int curBit = sector % 8;
 		bits[curPart][curByte] = (byte) (bits[curPart][curByte] | (1 << curBit));
+		free_sectors--;
 	}
 	
 	public void free_sector(int sector) {
@@ -41,9 +43,10 @@ public class BitMap {
 		int curByte = (sector % (Disk.SECTOR_SIZE * 8)) / 8;
 		int curBit = sector % 8;
 		bits[curPart][curByte] = (byte) (bits[curPart][curByte] & (-1 ^ (1 << curBit)));
+		free_sectors++;
 	}
 	
-	public int first_free() {
+	public int first_free_sector() {
 		for(int i = 0; i < sec_div; i++) {
 			for(int j = 0; j < Disk.SECTOR_SIZE; j++) {
 				if ( bits[i][j] != -1) {
@@ -53,10 +56,42 @@ public class BitMap {
 						if( (((byte)(1<<bit)) & comp) == 0 ) {
 							int ret = (i*(Disk.SECTOR_SIZE * 8)) + (j*8) + bit;
 							bits[i][j] = (byte) (bits[i][j] | (1 << bit));
+							free_sectors--;
 							return ret;
 						}
 						bit++;
 					}
+				}
+			}
+		}
+		
+		
+		return -1;
+	}
+	
+	public int first_free_block() {
+		boolean found_first = false;
+		for(int i = 0; i < sec_div; i++) {
+			for(int j = 0; j < Disk.SECTOR_SIZE; j++) {
+				if ( bits[i][j] != -1) {
+					int bit = 0;
+					byte comp = bits[i][j];
+					while( bit < 8 ) {
+						if( (((byte)(1<<bit)) & comp) == 0 ) {
+							int ret = (i*(Disk.SECTOR_SIZE * 8)) + (j*8) + bit;
+							if(found_first) {
+								set_sector(ret);
+								set_sector(ret-1);
+								return ret-1;
+							} else {
+								found_first = true;
+							}
+						} else {
+							found_first = false;
+						}
+						bit++;
+					}
+					found_first = false;
 				}
 			}
 		}
@@ -73,7 +108,7 @@ public class BitMap {
 		t.set_object("BitMap");
 		BitMap bm1 = new BitMap(16384);
 
-		t.set_method("get_sector");
+		t.set_method("set_sector");
 		bm1.set_sector(1);
 		t.is_true(bm1.get_sector(1));
 		bm1.set_sector(4987);
@@ -102,7 +137,15 @@ public class BitMap {
 			bm2.set_sector(i);
 		}
 		
-		int j = bm2.first_free();
+		int j = bm2.first_free_sector();
 		t.is_equal(1024, j);
+		
+		j = bm2.first_free_block();
+		t.is_equal(1025, j);
+		bm2.set_sector(1027);
+		j = bm2.first_free_block();
+		t.is_equal(1028, j);
+		j = bm2.first_free_block();
+		t.is_equal(1030, j);
 	}
 }

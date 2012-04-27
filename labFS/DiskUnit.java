@@ -93,6 +93,8 @@ public class DiskUnit implements DiskCallback{
 		BitMap.unit(t);
 		System.out.println("Testing TNode");
 		TNode.unit(t);
+		System.out.println("Testing Internal Node");
+		InternalNode.unit(t);
 		
 		System.out.println();
 		t.close();

@@ -15,11 +15,8 @@ import java.util.concurrent.locks.Condition;
 
 public class PTree{
 	/*
-	 * Glodals: (2 sectors)
-	 * 		Pointer to Tree Pointers?
-	 * 		Pointer to Bit Map?
-	 * 		Pointer to Data Section?
-	 * 		Number of Trees?
+	 * allocTNodes: (1 sector)
+	 * 		byte array
 	 * 
 	 * Tree Pointers: (32 sectors)
 	 * 		Tnodes (each 32 bytes)
@@ -52,16 +49,20 @@ public class PTree{
 	public static final int TNODE_POINTERS = 8;
 	public static final int BLOCK_SIZE_BYTES = 1024;
 	public static final int POINTERS_PER_INTERNAL_NODE = 256;
-	
+
+	public static final int TNODES_PER_SECT = 5;
+
+	public static final int ALLOC_LOCATION = 1025;
 	public static final int BITMAP_LOCATION = 1026;
-	public static int TNODE_LOCTION = BITMAP_LOCATION + Disk.NUM_OF_SECTORS/(Disk.SECTOR_SIZE * 8);
-	
+	public static int TNODE_LOCATION = BITMAP_LOCATION + Disk.NUM_OF_SECTORS/(Disk.SECTOR_SIZE * 8);
+	public static int DATA_LOCATION = TNODE_LOCATION + 103;
+
 
 	private ADisk disk;
 	private SimpleLock lock;
 	private Condition inUse;
 	private boolean beingUsed;
-	private TNode[] tnodes;
+	private byte[] allocTNodes;
 	private BitMap bitMap;
 
 	/**
@@ -76,8 +77,8 @@ public class PTree{
 		lock = new SimpleLock();
 		inUse = lock.newCondition();
 		beingUsed = false;
-		tnodes = new TNode[MAX_TREES];
-		bitMap = new BitMap(Disk.NUM_OF_SECTORS);
+		allocTNodes = new byte[MAX_TREES];
+		bitMap = new BitMap(Disk.NUM_OF_SECTORS, DATA_LOCATION);
 	}
 
 	public TransID beginTrans()
@@ -88,7 +89,7 @@ public class PTree{
 				inUse.await();
 			} catch (InterruptedException e) {}
 		}
-		
+
 		beingUsed = true;
 		TransID id = disk.beginTransaction();
 		lock.unlock();
@@ -99,14 +100,15 @@ public class PTree{
 	throws IOException, IllegalArgumentException
 	{
 		lock.lock();
-		
+
 		// update bitmap on disk
 		byte[][] bits = bitMap.get_bits();
 		for (int i = 0; i < bits.length; i++) 
 			disk.writeSector(xid, BITMAP_LOCATION+i, bits[i]);
-		
-		
-		
+
+		// write allocTNodes
+		disk.writeSector(xid, ALLOC_LOCATION, allocTNodes);
+
 		// set to not in use
 		disk.commitTransaction(xid);
 		beingUsed = false;
@@ -122,11 +124,17 @@ public class PTree{
 	{
 		// lock
 		lock.lock();
-		
+
 		disk.abortTransaction(xid);
-		
-		// TODO free from bitmap????
-		
+		TransID id = disk.beginTransaction();
+		disk.readSector(id, ALLOC_LOCATION, allocTNodes);
+
+		for(int i = 0; i < 4; i++) {
+			disk.readSector(id, BITMAP_LOCATION + i, bitMap.bits[i]);
+		}
+
+		disk.abortTransaction(id);
+
 		beingUsed = false;
 		// signal
 		inUse.signalAll();
@@ -141,47 +149,48 @@ public class PTree{
 	{
 		// find a place for a new Tnode
 		int tnum = -1;
-		for(int i = 0; i < tnodes.length && tnum == -1; i++ ) {
-			if(tnodes[i] == null) {
+		for(int i = 0; i < allocTNodes.length && tnum == -1; i++ ) {
+			if(allocTNodes[i] == 0) {
 				tnum = i;
+				allocTNodes[i] = 1;
 			}
 		}
-		
+
 		// add data to Tnode
-		tnodes[tnum] = new TNode(tnum);
-		
+		TNode tnode = new TNode(tnum);
+
 		// add write to transaction
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
-		int begin = (tnum/5) *5; // TODO change for updates
-		for(int i = begin; i < 5; i++) {
-			if(tnodes[i] != null) tnodes[i].write_to_buffer(buffer);
-		}
-		assert(buffer[501] == 0);
-		
+		int begin = (tnum/TNODES_PER_SECT) *TNODES_PER_SECT;
+		disk.readSector(xid, TNODE_LOCATION + begin, buffer);
+		tnode.write_to_buffer(buffer);
+
 		// disk.writeSector(xid, sectorNum, buffer)
-		disk.writeSector(xid, TNODE_LOCTION + begin, buffer);
-		
+		disk.writeSector(xid, TNODE_LOCATION + begin, buffer);
+
 		// return tnum (the location of the tnode)
-		return -tnum;
+		return tnum;
 	}
 
 	public void deleteTree(TransID xid, int tnum) 
 	throws IOException, IllegalArgumentException
 	{
-		// free in all block used by tree in bit map
-		TNode current_node = tnodes[tnum];
-		tnodes[tnum] = null;
-		
+		TNode current_node = create_TNode(xid, tnum);
+		allocTNodes[tnum] = 0;
+
 		// free blocks and free blocks in bitmap
-		ArrayList<Integer> list = current_node.free_blocks();
-		//int indirect ptr
-		
-		// zero the block that has that tnode
+		current_node.free_blocks(xid, bitMap, disk);
+	}
+
+	public TNode create_TNode(TransID xid, int tnum) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
+		int begin = (tnum/TNODES_PER_SECT) *TNODES_PER_SECT;
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
-		int begin = (tnum/5) *5; // TODO change for updates
-		for(int i = begin; i < 5; i++) {
-			if(tnodes[i] != null) tnodes[i].write_to_buffer(buffer);
-		}
+
+		// free in all block used by tree in bit map
+		disk.readSector(xid, TNODE_LOCATION + begin, buffer);
+		TNode current_node = TNode.build_from_buffer(buffer, tnum, disk);
+
+		return current_node;
 	}
 
 	/**
@@ -196,18 +205,34 @@ public class PTree{
 	public int getMaxDataBlockId(TransID xid, int tnum)
 	throws IOException, IllegalArgumentException
 	{
-		// get the data stored in the tnode
-		// keep track of this as you add and remove blocks
-		return -1;
+		TNode current = create_TNode(xid, tnum);
+		return current.total_blocks;
 	}
 
 	public void readData(TransID xid, int tnum, int blockId, byte buffer[])
 	throws IOException, IllegalArgumentException
-	{
+	{		
 		// find the sectors in the Tnode
+		TNode t = create_TNode(xid, tnum);
+		if(blockId > t.total_blocks) {
+			for(int i = 0; i < buffer.length; i++) {
+				buffer[i] = 0;
+			}
+			return;
+		}
+
+		int s = t.get_sector(xid, blockId, disk);
+
 		// read from ADisk to two buffers
-		// combine the two buffers to the one buffer, pass two reads
-		// return
+		byte[] b1 = new byte[Disk.SECTOR_SIZE];
+		byte[] b2 = new byte[Disk.SECTOR_SIZE];
+		disk.readSector(xid, s, b1);
+		disk.readSector(xid, s+1, b2);
+		byte[] b3 = TNode.combine_buffer(b1, b2);
+
+		for(int i = 0; i < buffer.length && i < b3.length; i++ ) {
+			buffer[i] = b3[i];
+		}
 	}
 
 
@@ -215,60 +240,137 @@ public class PTree{
 	throws IOException, IllegalArgumentException
 	{
 		// see if tree contains the blockId'th block.
-		// if so, determine the sectors in the Tnode for that block (that sector and that sector plus one)
-		// 	not, find a new free 2 continuous sectors in the bitmap, mark them used, add the first to the 
-		//    	tnode's first available open block.  update any metadata (size etc)
-		// 
-		// 
-		// upate bitmap
-		// split the buffer,  pass two writes to the ADisk
-		//  
+		TNode t = create_TNode(xid, tnum);
+		t.writeBlock(xid, blockId, buffer, disk, bitMap);
+
+		// add write to transaction
+		byte[] buffer2 = new byte[Disk.SECTOR_SIZE];
+		int begin = (tnum/TNODES_PER_SECT) *TNODES_PER_SECT;
+		disk.readSector(xid, TNODE_LOCATION + begin, buffer2);
+		t.write_to_buffer(buffer2);
+
+		// disk.writeSector(xid, sectorNum, buffer)
+		disk.writeSector(xid, TNODE_LOCATION + begin, buffer2);
+
 	}
 
 	public void readTreeMetadata(TransID xid, int tnum, byte buffer[])
 	throws IOException, IllegalArgumentException
 	{
-		// find the tnode from the tnum.  follow first pointer to data block and read the
-		// first sector and copy the first 64 bytes to the buffer;
+		// find the tnode from the tnum.
+		TNode t = create_TNode(xid, tnum);
+		for(int i = 0; i < buffer.length; i++){
+			buffer[i] = t.metadata[i];
+		}
 	}
 
 
 	public void writeTreeMetadata(TransID xid, int tnum, byte buffer[])
 	throws IOException, IllegalArgumentException
 	{
-		// find the tnode from the tnum.  follow first pointer to data block and read the
-		// first sector and copy the first 64 bytes from the buffer to the sector
+		// find the tnode from the tnum.
+		TNode t = create_TNode(xid, tnum);
+		for(int i = 0; i < buffer.length; i++){
+			t.metadata[i] = buffer[i];
+		}
+
 		// and write the sector with adisk
-		// upate bitmap
+		byte[] b1 = new byte[Disk.SECTOR_SIZE];
+		int begin = (tnum/TNODES_PER_SECT) *TNODES_PER_SECT;
+		disk.readSector(xid, TNODE_LOCATION + begin, b1);
+		t.write_to_buffer(b1);
+
+		// disk.writeSector(xid, sectorNum, buffer)
+		disk.writeSector(xid, TNODE_LOCATION + begin, b1);
 	}
 
 	public int getParam(int param)
 	throws IOException, IllegalArgumentException
 	{
 		if(param == PTree.ASK_FREE_SPACE) {
-			//cycle through the bitmap and return number of free sectors available
+			return bitMap.free_sectors;
 		} else if (param == PTree.ASK_MAX_TREES) {
-			//return PTree.maxtrees
+			return MAX_TREES;
 		} else if (param == PTree.ASK_FREE_TREES) {
-			// return Ptree.maxtrees - number of trees;
+			int total = 0; 
+			for(int i = 0; i < allocTNodes.length; i++) {
+				if(allocTNodes[i] == 0) total++;
+			}
+			return total;
 		} else {
-			//throw appropriate exception
+			throw new IllegalArgumentException();
 		}
-		return -1;
 	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	public static void unit(Tester t) throws IllegalArgumentException, IOException {
+		t.set_object("PTree");
+		
+		
+		
+		// construtor
+		t.set_method("Constructor()");
+		PTree pt1 = new PTree(false);
+		t.is_equal(512, pt1.allocTNodes.length);
+		t.is_true(pt1.disk != null);
+		t.is_true(pt1.lock != null);
+		t.is_true(pt1.inUse != null);
+		t.is_true(pt1.bitMap != null);
+		
+		
+		
+		
+		
 
+		
+		// getParam
+		t.set_method("getParam()");
+		t.is_equal(Disk.NUM_OF_SECTORS - PTree.DATA_LOCATION, pt1.getParam(ASK_FREE_SPACE));
+		t.is_equal(PTree.MAX_TREES, pt1.getParam(PTree.ASK_MAX_TREES));
+		t.is_equal(PTree.MAX_TREES, pt1.getParam(PTree.ASK_FREE_TREES));
+		
+		
+		
+		
+		
+		
+		// beginTrans
+		t.set_method("beginTransaction()");
+		TransID xid1 = pt1.beginTrans();
+		t.is_true(xid1 != null);
+		t.is_true(pt1.beingUsed);
+		
+		
+		
+		// commitTrans
+		// abortTrans
+		
+		
+		// createTree
+		int tnum1 = pt1.createTree(xid1);
+		t.is_equal(0, tnum1);
+		t.is_equal(PTree.DATA_LOCATION, pt1.allocTNodes[0]);
+		
+		
+		
+		
+		
+		
+		// deleteTree
+		// create-TNode
+		// readTreeMetadata
+		// writeTreeMatadata
+		// getMaxDataBlockID
+		t.set_method("getMaxDataBlockId");
+		// readData
+		// writeData
 
+	}
 }
-
-/**
- * todo Finish tnode & inode
- * inode -
- * write_to_buffer
- *  build_from_buffer
- *  rebuild free_blocks
- *  getBlocks
- *  addBlock
- *  
- * Tnode - done.
- * all of ptree
- */
