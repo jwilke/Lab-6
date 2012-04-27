@@ -99,9 +99,16 @@ public class PTree{
 				disk.readSector(xid, PTree.BITMAP_LOCATION+i, bits[i]);
 			} catch (Exception e) {}
 		}
-		bitMap.passBits(bits);
-		for(int i = 0; i < DATA_LOCATION; i++) {
-			bitMap.set_sector(i);
+		
+		for(int i = 0; i < bitMap.sec_div; i++) {
+			for(int j = 0; j < Disk.SECTOR_SIZE; j++) {
+				if(bits[i][j] != 0) {
+					for(int x = 0; x < 8; x++) {
+						if(((bits[i][j] >> 7-x) & 0x1) == 1)
+							bitMap.set_sector(i*4+j);
+					}
+				}
+			}
 		}
 		
 		try {
@@ -133,14 +140,19 @@ public class PTree{
 
 		// update bitmap on disk
 		byte[][] bits = bitMap.get_bits();
-		for (int i = 0; i < bits.length; i++) 
+		for (int i = 0; i < bits.length; i++) {
 			disk.writeSector(xid, BITMAP_LOCATION+i, bits[i]);
+		}
 
 		// write allocTNodes
 		disk.writeSector(xid, ALLOC_LOCATION, allocTNodes);
 
 		// set to not in use
 		disk.commitTransaction(xid);
+		
+		
+		
+		
 		beingUsed = false;
 		// signal
 		inUse.signalAll();
@@ -195,7 +207,7 @@ public class PTree{
 
 		// add write to transaction
 		byte[] buffer = new byte[Disk.SECTOR_SIZE];
-		int begin = (tnum/TNODES_PER_SECT) *TNODES_PER_SECT;
+		int begin = (tnum/TNODES_PER_SECT);
 		disk.readSector(xid, TNODE_LOCATION + begin, buffer);
 		tnode.write_to_buffer(buffer);
 
@@ -282,7 +294,7 @@ public class PTree{
 
 		// add write to transaction
 		byte[] buffer2 = new byte[Disk.SECTOR_SIZE];
-		int begin = (tnum/TNODES_PER_SECT) *TNODES_PER_SECT;
+		int begin = (tnum/TNODES_PER_SECT);
 		disk.readSector(xid, TNODE_LOCATION + begin, buffer2);
 		t.write_to_buffer(buffer2);
 
@@ -313,7 +325,7 @@ public class PTree{
 
 		// and write the sector with adisk
 		byte[] b1 = new byte[Disk.SECTOR_SIZE];
-		int begin = (tnum/TNODES_PER_SECT) *TNODES_PER_SECT;
+		int begin = (tnum/TNODES_PER_SECT);
 		disk.readSector(xid, TNODE_LOCATION + begin, b1);
 		t.write_to_buffer(b1);
 
@@ -418,21 +430,33 @@ public class PTree{
 			data[i] = (byte)(i % 128);
 		}
 
-
-		int size = pt1.bitMap.free_sectors;
-		
-		pt1.writeData(xid1, 0, 0, data);
 		
 		for(int i = 511; i >= 0; i--) {
-			/*pt1.writeData(xid1, i, 1, data);
-			pt1.writeData(xid1, i, 2, data);
-			pt1.writeData(xid1, i, 3, data);*/
 			pt1.deleteTree(xid1, i);
 			t.is_equal(0, pt1.allocTNodes[i]);
 		}
 
 
 		// create-TNode
+		TNode tn2 = pt1.create_TNode(xid1, 0);
+		
+		
+		int add_blocks = tn2.total_blocks+1;
+		tn2.writeBlock(xid1, add_blocks, data, pt1.disk, pt1.bitMap);
+		
+		byte[] buff = new byte[512];
+		pt1.disk.readSector(xid1, PTree.TNODE_LOCATION, buff);
+		System.out.println(buff[33]+  " " + buff[34] + " " + buff[36]);
+		tn2.write_to_buffer(buff);
+		pt1.disk.writeSector(xid1, PTree.TNODE_LOCATION, buff);
+		pt1.commitTrans(xid1);
+		
+		xid1 = pt1.beginTrans();
+		TNode tn3 = pt1.create_TNode(xid1, 0);
+		t.is_equal(tn2.total_blocks, tn3.total_blocks);
+		System.out.println(tn2.total_blocks);
+		
+		
 		// readTreeMetadata
 		// writeTreeMatadata
 		// getMaxDataBlockID

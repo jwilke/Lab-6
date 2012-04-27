@@ -74,7 +74,7 @@ public class ADisk{
 		// start the log
 		log = new LogStatus(disk, cbt);
 		// recover if not formatting
-		if(!format) log.recover(wbl);
+		//if(!format) log.recover(wbl);
 
 		// start the worker that sends everything to disk
 		startWorker();

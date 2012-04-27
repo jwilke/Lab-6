@@ -22,14 +22,6 @@ public class BitMap {
 		}
 	}
 	
-	public void passBits(byte[][] b) {
-		for(int i = 0; i < sec_div; i++) {
-			for(int j = 0; j < Disk.SECTOR_SIZE; j++) {
-				bits[i][j] = b[i][j];
-			}
-		}
-	}
-
 	public boolean get_sector(int n) {
 		int bmsector = n / (Disk.SECTOR_SIZE * 8);
 		int bmbyte = (n % (Disk.SECTOR_SIZE * 8)) / 8;

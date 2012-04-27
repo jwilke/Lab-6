@@ -162,8 +162,6 @@ public class TNode {
 			ret.metadata[i] = buffer[101*spot+37+i];
 		}
 
-		// TODO traverse tree if height > 1
-
 		return ret;
 	}
 
@@ -373,9 +371,9 @@ public class TNode {
 		
 		t.set_method("build_from_buffer");
 		TNode tn2 = new TNode(0);
-		sect = bm.first_free_sector();
+		sect = bm.first_free_block();
 		tn2.addBlock(xid, sect, bm, disk);
-		int sect2 = bm.first_free_sector();
+		int sect2 = bm.first_free_block();
 		tn2.addBlock(xid, sect2, bm, disk);
 		byte[] buff = new byte[512];
 		tn2.write_to_buffer(buff);
