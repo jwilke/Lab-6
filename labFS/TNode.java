@@ -104,7 +104,6 @@ public class TNode {
 
 		// build node if need
 		if(intNodes[the_node] == null) {
-			System.out.println("hey");
 			intNodes[the_node] = InternalNode.build_from_buffer(getInternalBuffer(xid, ptrs[the_node], disk), ptrs[the_node], height-1);
 		}
 

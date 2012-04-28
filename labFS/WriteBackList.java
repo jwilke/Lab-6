@@ -22,6 +22,7 @@ public class WriteBackList{
 	 */
 	LinkedList<Transaction> list;
 	SimpleLock lock;
+	
 	Condition is_empty;
 	
 	public WriteBackList() {

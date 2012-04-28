@@ -130,6 +130,7 @@ public class InternalNode {
 		if(h == 1) {
 			return ptrs[blockID];
 		}
+		
 		// math
 		double divisor = Math.pow(256, h-1);
 		int the_node = (int) (blockID / divisor);
