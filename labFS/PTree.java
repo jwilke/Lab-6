@@ -92,7 +92,7 @@ public class PTree{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
+		
 		bitMap = new BitMap(Disk.NUM_OF_SECTORS);
 		byte[][] bits = new byte[bitMap.sec_div][Disk.SECTOR_SIZE];
 		for(int i = 0; i < bitMap.sec_div; i++) {
@@ -110,7 +110,6 @@ public class PTree{
 							}
 							continue;
 						}
-						System.out.println("bits: " + bits[i][j]);
 						for(int x = 0; x < 8; x++) {
 							if(((bits[i][j] >> 7-x) & 0x1) == 1)
 								bitMap.set_sector(i*4096+j*8+x);
@@ -377,6 +376,10 @@ public class PTree{
 		t.set_object("PTree");
 
 
+		byte data[] = new byte[1024];
+		for(int i = 0; i < 1024; i++) {
+			data[i] = (byte)(i % 128);
+		}
 
 		// construtor
 		t.set_method("Constructor()");
@@ -419,43 +422,42 @@ public class PTree{
 		// createTree
 		t.set_method("createTree()");
 		int tnum1 = pt1.createTree(xid1);
-		t.is_equal(0, tnum1);
+		t.is_equal(pt1.MAX_TREES - pt1.getParam(PTree.ASK_FREE_TREES)-1, tnum1);
 		t.is_equal(1, pt1.allocTNodes[0]);
+		pt1.commitTrans(xid1);
+		xid1 = pt1.beginTrans();
 
 		//t.is_equal(PTree.DATA_LOCATION, pt1.allocTNodes[0]);  // This test fails but I'm not sure what you were trying to test.
 
-		for(int i = 1; i < PTree.MAX_TREES; i++) {  //use up all the nodes
+		/*for(int i = 1; i < pt1.getParam(PTree.ASK_FREE_TREES); i++) {  //use up all the nodes
 			tnum1 = pt1.createTree(xid1);
-			t.is_equal(i, tnum1);
 			t.is_equal(1, pt1.allocTNodes[i]);
 		}
 
-		try {
+		/*try {
 			tnum1 = pt1.createTree(xid1);  //no more room so should get an error
 		} catch (Exception e) {
 			t.is_true(e instanceof ResourceException);
-		}
+		}*/
 
 
 		// deleteTree
 		t.set_method("deleteTree()");
-		byte data[] = new byte[1024];
-		for(int i = 0; i < 1024; i++) {
-			data[i] = (byte)(i % 128);
-		}
+		
 
 		
-		for(int i = 511; i >= 0; i--) {
+		/*for(int i = 511; i > 0; i--) {
 			pt1.deleteTree(xid1, i);
 			t.is_equal(0, pt1.allocTNodes[i]);
 		}
+		t.is_true(pt1.allocTNodes[0] == 1);*/
 
 
 		// create-TNode
 		TNode tn2 = pt1.create_TNode(xid1, 0);
+		//pt1.allocTNodes[0] = 1;
 		
-		
-		int add_blocks = tn2.total_blocks+1;
+		int add_blocks = tn2.total_blocks;
 		tn2.writeBlock(xid1, add_blocks, data, pt1.disk, pt1.bitMap);
 		
 		byte[] buff = new byte[512];
@@ -467,7 +469,7 @@ public class PTree{
 		xid1 = pt1.beginTrans();
 		TNode tn3 = pt1.create_TNode(xid1, 0);
 		t.is_equal(tn2.total_blocks, tn3.total_blocks);
-		System.out.println(tn2.total_blocks);
+		System.out.println("total blocks: " + tn2.total_blocks);
 		
 		
 		// readTreeMetadata
