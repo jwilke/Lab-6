@@ -71,7 +71,7 @@ public class TNode {
 			sect = bitmap.first_free_block();
 			addBlock(xid, sect, bitmap, disk);
 		}
-		if(total_blocks < 8) {
+		if(total_blocks <= 8) {
 			int sector_num = ptrs[blockID];
 			byte[][] sec_buffers = split_buffer(buffer, 2);
 			disk.writeSector(xid, sector_num, sec_buffers[0]);
@@ -222,7 +222,7 @@ public class TNode {
 	public static void unit(Tester t) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
 		t.set_object("TNode");
 		
-		ADisk disk = new ADisk(false);
+		ADisk disk = new ADisk(true);
 		TransID xid = disk.beginTransaction();
 		
 		
