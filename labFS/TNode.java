@@ -30,10 +30,9 @@ public class TNode {
 		} else {
 			
 			if(total_blocks == 8 || (total_blocks/8)%256 == 0) {
-				System.out.println("Hey");
 				expandHeight(bitmap);
 			}
-			System.out.println(total_blocks);
+
 			double divisor = Math.pow(256, height-1);
 			int the_node = (int) (total_blocks / divisor);
 			if(intNodes[the_node] == null) {
