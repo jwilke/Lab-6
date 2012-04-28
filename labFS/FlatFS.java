@@ -60,7 +60,7 @@ public class FlatFS{
 		int beginID = offset / PTree.BLOCK_SIZE_BYTES;
 		int in_first_block = 1024-(offset%1024);
 		int in_last_block = (count - in_first_block) % 1024; 
-		int endID = (offset + count) /PTree.BLOCK_SIZE_BYTES;
+		int endID = (offset + count - 1) /PTree.BLOCK_SIZE_BYTES;
 		int file_end = disk.getMaxDataBlockId(xid, inumber);
 		
 		if(file_end < endID) {
@@ -93,7 +93,8 @@ public class FlatFS{
 	{
 		int max_blocks = disk.getMaxDataBlockId(xid, inumber);
 		int beginID = offset / PTree.BLOCK_SIZE_BYTES;
-		int endID = (offset + count) /PTree.BLOCK_SIZE_BYTES;
+		int endID = (offset + count - 1) / PTree.BLOCK_SIZE_BYTES;
+		System.out.println("begin: " + beginID + " end: " + endID);
 		
 		// read first block if needed
 		byte[] bufferOut = new byte[PTree.BLOCK_SIZE_BYTES];
@@ -175,15 +176,20 @@ public class FlatFS{
 		t.set_method("read and write()");
 		TransID id = f.beginTrans();
 		int inumber1 = f.createFile(id);
-		
+		int c = 0;
 		for(int i = 0; i < 9; i++) {
 			f.write(id, inumber1, i*1024, 1024, data);
-			int c = f.read(id, inumber1, i*1024, 1024, test_data);
+			c = f.read(id, inumber1, i*1024, 1024, test_data);
 			t.is_equal(data, test_data);
 			t.is_equal(c, 1024);
 		}
-		f.commitTrans(id);
 		
+		f.write(id, inumber1, 500, 1023, data);
+		c = f.read(id, inumber1, 500, 1023, test_data);
+		t.is_equal(data, test_data);
+		t.is_equal(1023, c);
+		
+		f.commitTrans(id);
 	}
 
 
