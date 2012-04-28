@@ -62,20 +62,24 @@ public class FlatFS{
 		int in_last_block = (count - in_first_block) % 1024; 
 		int endID = (offset + count) /PTree.BLOCK_SIZE_BYTES;
 		int file_end = disk.getMaxDataBlockId(xid, inumber);
+		
 		if(file_end < endID) {
 			count -= (endID - file_end - 1)*PTree.BLOCK_SIZE_BYTES + in_last_block;
 			endID = file_end;
 		}
+		
 		byte[][] allBuff = new byte[endID - beginID + 1][PTree.BLOCK_SIZE_BYTES];
 		for(int i = beginID; i <= endID; i++ ) {
 			disk.readData(xid, inumber, i, allBuff[i - beginID]);
 		}
+		
 		int new_offset = offset % 1024;
 		int index = 0;
+		
 		for(int i = 0; i < allBuff.length; i++) {
 			int temp = 0;
 			if(i == 0) temp = new_offset;
-			 for(int j = temp; j < allBuff[i].length; j++) {
+			 for(int j = temp; j < allBuff[i].length && index < buffer.length; j++) {
 				 buffer[index] = allBuff[i][j];
 				 index++;
 			 }
@@ -87,12 +91,14 @@ public class FlatFS{
 	public void write(TransID xid, int inumber, int offset, int count, byte buffer[])
 	throws IOException, IllegalArgumentException
 	{
+		int max_blocks = disk.getMaxDataBlockId(xid, inumber);
 		int beginID = offset / PTree.BLOCK_SIZE_BYTES;
 		int endID = (offset + count) /PTree.BLOCK_SIZE_BYTES;
 		
 		// read first block if needed
 		byte[] bufferOut = new byte[PTree.BLOCK_SIZE_BYTES];
-		disk.readData(xid, inumber, beginID, bufferOut);
+		if(max_blocks > beginID)
+			disk.readData(xid, inumber, beginID, bufferOut);
 		
 		// copy first block
 		int j = 0;
@@ -110,7 +116,8 @@ public class FlatFS{
 		}
 		
 		// read last block if needed
-		disk.readData(xid, inumber, beginID, bufferOut);
+		if(max_blocks > endID)
+			disk.readData(xid, inumber, endID, bufferOut);
 		
 		// copy last block
 		for(int i = 0; j < count; i++, j++) {
@@ -150,7 +157,34 @@ public class FlatFS{
 		}
 	}
 
+	public static void unit(Tester t) throws IllegalArgumentException, IOException {
+		t.set_object("FlatFS");
 
+
+		byte data[] = new byte[1024];
+		for(int i = 0; i < 1024; i++) {
+			data[i] = (byte)(i % 128);
+		}
+		byte test_data[] = new byte[1024];
+		for(int i = 0; i < 1024; i++) {
+			data[i] = (byte)(i % 128);
+		}
+		FlatFS f = new FlatFS(false);
+		
+		// createFile()
+		t.set_method("read and write()");
+		TransID id = f.beginTrans();
+		int inumber1 = f.createFile(id);
+		
+		for(int i = 0; i < 9; i++) {
+			f.write(id, inumber1, i*1024, 1024, data);
+			int c = f.read(id, inumber1, i*1024, 1024, test_data);
+			t.is_equal(data, test_data);
+			t.is_equal(c, 1024);
+		}
+		f.commitTrans(id);
+		
+	}
 
 
 

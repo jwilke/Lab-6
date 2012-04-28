@@ -268,7 +268,7 @@ public class PTree{
 	throws IOException, IllegalArgumentException
 	{
 		TNode current = create_TNode(xid, tnum);
-		return current.total_blocks;
+		return current.total_blocks-1;
 	}
 
 	public void readData(TransID xid, int tnum, int blockId, byte buffer[])
@@ -398,10 +398,7 @@ public class PTree{
 
 		// getParam
 		t.set_method("getParam()");
-		//t.is_equal(Disk.NUM_OF_SECTORS - PTree.DATA_LOCATION, pt1.getParam(ASK_FREE_SPACE));
 		t.is_equal(PTree.MAX_TREES, pt1.getParam(PTree.ASK_MAX_TREES));
-		//t.is_equal(PTree.MAX_TREES, pt1.getParam(PTree.ASK_FREE_TREES));
-
 
 
 
@@ -412,11 +409,7 @@ public class PTree{
 		TransID xid1 = pt1.beginTrans();
 		t.is_true(xid1 != null);
 		t.is_true(pt1.beingUsed);
-
-
-
-		// commitTrans
-		// abortTrans
+		
 
 
 		// createTree
@@ -427,37 +420,44 @@ public class PTree{
 		pt1.commitTrans(xid1);
 		xid1 = pt1.beginTrans();
 
-		//t.is_equal(PTree.DATA_LOCATION, pt1.allocTNodes[0]);  // This test fails but I'm not sure what you were trying to test.
+		t.is_equal(1, pt1.allocTNodes[0]);
 
-		/*for(int i = 1; i < pt1.getParam(PTree.ASK_FREE_TREES); i++) {  //use up all the nodes
+		for(int i = 1; i < pt1.getParam(PTree.ASK_FREE_TREES); i++) {  //use up all the nodes
 			tnum1 = pt1.createTree(xid1);
 			t.is_equal(1, pt1.allocTNodes[i]);
 		}
 
-		/*try {
+		try {
 			tnum1 = pt1.createTree(xid1);  //no more room so should get an error
 		} catch (Exception e) {
 			t.is_true(e instanceof ResourceException);
-		}*/
+		}
 
 
+		
+		
+		
+		
+		
+		
 		// deleteTree
 		t.set_method("deleteTree()");
 		
-
-		
-		/*for(int i = 511; i > 0; i--) {
+		for(int i = 511; i > 0; i--) {
 			pt1.deleteTree(xid1, i);
 			t.is_equal(0, pt1.allocTNodes[i]);
 		}
-		t.is_true(pt1.allocTNodes[0] == 1);*/
 
+		
+		
+		
+		
 
 		// create-TNode
+		t.set_method("create_TNode()");
 		TNode tn2 = pt1.create_TNode(xid1, 0);
-		//pt1.allocTNodes[0] = 1;
 		
-		int add_blocks = tn2.total_blocks;
+		int add_blocks = tn2.total_blocks-1;
 		tn2.writeBlock(xid1, add_blocks, data, pt1.disk, pt1.bitMap);
 		
 		byte[] buff = new byte[512];
@@ -469,15 +469,74 @@ public class PTree{
 		xid1 = pt1.beginTrans();
 		TNode tn3 = pt1.create_TNode(xid1, 0);
 		t.is_equal(tn2.total_blocks, tn3.total_blocks);
-		System.out.println("total blocks: " + tn2.total_blocks);
+		for(int i = 0; i < 8; i++)
+			t.is_equal(tn2.ptrs[i], tn3.ptrs[i]);
 		
 		
-		// readTreeMetadata
+		
+		
+		
+		
 		// writeTreeMatadata
+        t.set_method("writeTreeMetaData()");
+        byte[] meta1 = new byte[64];
+        for(int i = 0; i < 64; i++) {
+                meta1[i] = (byte) i;
+        }
+        tnum1 = pt1.createTree(xid1);
+        pt1.writeTreeMetadata(xid1, tnum1, meta1);
+        pt1.commitTrans(xid1);
+        xid1 = pt1.beginTrans();
+        byte[] tnodeArr1 = new byte[512];
+        pt1.disk.readSector(xid1, TNODE_LOCATION + tnum1/5, tnodeArr1);
+
+        for(int i = 0; i < 64; i++) {
+                t.is_equal(meta1[i], tnodeArr1[i + 37 + 101*(tnum1%5)]);
+        }
+
+
+
+
+        // readTreeMetadata
+        t.set_method("readTreeMetaData()");
+        byte[] meta2 = new byte[64];
+        pt1.readTreeMetadata(xid1, tnum1, meta2);
+        t.is_equal(meta1, meta2);
+
+
+
+
+
+        // getMaxDataBlockID
+        t.set_method("getMaxDataBlockId");
+        byte[] buffer1 = new byte[1024];
+        t.is_equal(-1, pt1.getMaxDataBlockId(xid1, tnum1));
+        pt1.writeData(xid1, tnum1, 2, buffer1);
+        t.is_equal(2, pt1.getMaxDataBlockId(xid1, tnum1));
+        pt1.writeData(xid1, tnum1, 3, buffer1);
+        t.is_equal(3, pt1.getMaxDataBlockId(xid1, tnum1));
+        pt1.writeData(xid1, tnum1, 4, buffer1);
+        t.is_equal(4, pt1.getMaxDataBlockId(xid1, tnum1));
+        pt1.writeData(xid1, tnum1, 100, buffer1);
+        t.is_equal(100, pt1.getMaxDataBlockId(xid1, tnum1));
+        pt1.writeData(xid1, tnum1, 256*8, buffer1);
+        t.is_equal(256*8, pt1.getMaxDataBlockId(xid1, tnum1));
+        
+        
+        
 		// getMaxDataBlockID
 		t.set_method("getMaxDataBlockId");
-		// readData
-		// writeData
+		
+		// readData && writeData
+		for(int i = 0; i < 1024; i++) {
+			data[i] = (byte) (Math.random() * 128);
+		}
+		int blockID = pt1.getMaxDataBlockId(xid1, 0) - 1;
+		pt1.writeData(xid1, 0, blockID, data);
+		byte[] test_data = new byte[1024];
+		pt1.readData(xid1, 0, blockID, test_data);
+		t.is_equal(data, test_data);
+		
 		pt1.commitTrans(xid1);
 		
 		while(!pt1.disk.wbl.is_empty()) {

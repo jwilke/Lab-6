@@ -13,7 +13,7 @@ public class InternalNode {
 		height = h;
 		sector = s;
 		ptrs = new int[PTree.POINTERS_PER_INTERNAL_NODE];
-		nodes = null;
+		nodes = new InternalNode[PTree.POINTERS_PER_INTERNAL_NODE];
 	}
 
 	public InternalNode(int s, int h, int[] inodes) {
@@ -76,6 +76,7 @@ public class InternalNode {
 			}
 			return ret;
 		}
+
 		return null;
 	}
 
@@ -100,7 +101,7 @@ public class InternalNode {
 	public void free_blocks(TransID xid, BitMap bm, int h, ADisk disk) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
 		if(h > 1) {
 			// free other internal nodes
-			for(int i = 0; i < nodes.length; i++) {
+			for(int i = 0; i < ptrs.length; i++) {
 				if(ptrs[i] != 0) {
 					if(nodes[i] == null) {
 						byte[] buffer1 = new byte[Disk.SECTOR_SIZE];
@@ -113,7 +114,7 @@ public class InternalNode {
 					nodes[i].free_blocks(xid, bm, h-1, disk);
 					nodes[i] = null;
 				}
-			}
+			}  
 		}
 
 		// free these pointers 
