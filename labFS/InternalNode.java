@@ -45,9 +45,19 @@ public class InternalNode {
 		int the_node = (int) (blockID / divisor);
 		// build from b
 		if(nodes[the_node] == null) {
-			nodes[the_node] = InternalNode.build_from_buffer(TNode.getInternalBuffer(xid, ptrs[the_node], disk), ptrs[the_node], h-1);
+			int sect = bitmap.first_free_block();
+			nodes[the_node] = new InternalNode(sect, height-1);
+			ptrs[the_node] = sect;
+			//nodes[the_node] = InternalNode.build_from_buffer(TNode.getInternalBuffer(xid, ptrs[the_node], disk), ptrs[the_node], h-1);
 		}
 		nodes[the_node].addBlock(xid, s, bitmap, (int)(blockID - (the_node * divisor)), h-1, disk);
+		
+		// write to disk
+		byte[] b1024 = new byte[1024];
+		nodes[the_node].write_to_buffer(b1024, h-1);
+		byte[][] bOut = TNode.split_buffer(b1024, 2);
+		disk.writeSector(xid, ptrs[the_node], bOut[0]);
+		disk.writeSector(xid, ptrs[the_node]+1, bOut[1]);
 	}
 	
 	
