@@ -28,14 +28,19 @@ public class TNode {
 				}
 			}
 		} else {
-
+			
 			if(total_blocks == 8 || (total_blocks/8)%256 == 0) {
+				System.out.println("Hey");
 				expandHeight(bitmap);
 			}
+			System.out.println(total_blocks);
 			double divisor = Math.pow(256, height-1);
 			int the_node = (int) (total_blocks / divisor);
 			if(intNodes[the_node] == null) {
-				intNodes[the_node] = InternalNode.build_from_buffer(getInternalBuffer(xid, ptrs[the_node], disk), ptrs[the_node], height-1); 
+				int sect = bitmap.first_free_block();
+				intNodes[the_node] = new InternalNode(sect, height-1);
+				ptrs[the_node] = sect;
+				//intNodes[the_node] = InternalNode.build_from_buffer(getInternalBuffer(xid, ptrs[the_node], disk), ptrs[the_node], height-1);
 			}
 			
 			intNodes[the_node].addBlock(xid, sector, bitmap, (int)(total_blocks - (the_node * divisor)), height-1, disk);
@@ -67,11 +72,13 @@ public class TNode {
 	public void writeBlock(TransID xid, int blockID, byte[] buffer, ADisk disk, BitMap bitmap) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
 		int sect = -1;
 		// increase size if needed
+
 		while(blockID >= total_blocks) {
 			sect = bitmap.first_free_block();
 			addBlock(xid, sect, bitmap, disk);
 		}
-		if(total_blocks < 8) {
+
+		if(total_blocks <= 8) {
 			int sector_num = ptrs[blockID];
 			byte[][] sec_buffers = split_buffer(buffer, 2);
 			disk.writeSector(xid, sector_num, sec_buffers[0]);
