@@ -23,6 +23,7 @@ public class InternalNode {
 		nodes = new InternalNode[PTree.POINTERS_PER_INTERNAL_NODE];
 		for(int i = 0; i < inodes.length; i++) {
 			ptrs[i] = inodes[i];
+			System.out.println("i: " + ptrs[i]);
 			nodes[i] = null;
 		}
 	}

@@ -99,6 +99,7 @@ public class TNode {
 		if(height == 1) {
 			return ptrs[blockID];
 		}
+		
 		double divisor = Math.pow(256, height-1);
 		int the_node = (int) (blockID / divisor);
 

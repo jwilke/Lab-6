@@ -57,7 +57,7 @@ public class PTree{
 	public static int DATA_LOCATION = TNODE_LOCATION + 103;
 
 
-	private ADisk disk;
+	public ADisk disk;
 	private SimpleLock lock;
 	private Condition inUse;
 	private boolean beingUsed;
@@ -117,12 +117,11 @@ public class PTree{
 					}
 				}
 			}
-		}
-		//if(doFormat) {
+		} else {
 			for(int i = 0; i < PTree.DATA_LOCATION; i++) {
 				bitMap.set_sector(i);
 			}
-		//}
+		}
 		
 		try {
 			disk.commitTransaction(xid);
@@ -282,7 +281,6 @@ public class PTree{
 			}
 			return;
 		}
-
 		int s = t.get_sector(xid, blockId, disk);
 
 		// read from ADisk to two buffers

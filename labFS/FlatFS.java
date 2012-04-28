@@ -62,7 +62,8 @@ public class FlatFS{
 		int in_last_block = (count - in_first_block) % 1024; 
 		int endID = (offset + count - 1) /PTree.BLOCK_SIZE_BYTES;
 		int file_end = disk.getMaxDataBlockId(xid, inumber);
-		System.out.println(file_end);
+		
+		System.out.println("begin: " + beginID + " endID: " + endID);
 		if(file_end < endID) {
 			count -= (endID - file_end - 1)*PTree.BLOCK_SIZE_BYTES + in_last_block;
 			endID = file_end;
@@ -124,6 +125,7 @@ public class FlatFS{
 			bufferOut[i] = buffer[j];
 		}
 		disk.writeData(xid, inumber, endID, bufferOut);
+		System.out.println("final blocks: " + disk.getMaxDataBlockId(xid, inumber));
 	}
 	
 	
@@ -198,12 +200,13 @@ public class FlatFS{
 		t.is_equal(data, test_data);
 		t.is_equal(1023, c);
 		
-		/*data = f.quick_buf(4500);
-		test_data = new byte[4500];
-		f.write(id, inumber1, 5000, 4500, data);
-		c = f.read(id, inumber1, 5000, 4500, test_data);
+		int size = 2049;
+		data = f.quick_buf(size);
+		test_data = new byte[size];
+		f.write(id, inumber1, 7168, size, data);
+		c = f.read(id, inumber1, 7168, size, test_data);
 		t.is_equal(data, test_data);
-		t.is_equal(c, 4500);*/
+		t.is_equal(c, size);
 		
 		f.commitTrans(id);
 		while(!f.disk.disk.wbl.is_empty()) {
