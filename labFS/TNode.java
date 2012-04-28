@@ -50,7 +50,7 @@ public class TNode {
 			byte[][] bOut = split_buffer(b1024, 2);
 			disk.writeSector(xid, ptrs[the_node], bOut[0]);
 			disk.writeSector(xid, ptrs[the_node]+1, bOut[1]);
-		}
+		}   
 
 		total_blocks++;
 

@@ -113,7 +113,7 @@ public class InternalNode {
 					nodes[i].free_blocks(xid, bm, h-1, disk);
 					nodes[i] = null;
 				}
-			}
+			}  
 		}
 
 		// free these pointers 
