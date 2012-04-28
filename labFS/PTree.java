@@ -273,6 +273,7 @@ public class PTree{
 	public void readData(TransID xid, int tnum, int blockId, byte buffer[])
 	throws IOException, IllegalArgumentException, EOFException
 	{		
+		
 		// find the sectors in the Tnode
 		TNode t = create_TNode(xid, tnum);
 		if(blockId > t.total_blocks) {
@@ -293,16 +294,19 @@ public class PTree{
 		for(int i = 0; i < buffer.length && i < b3.length; i++ ) {
 			buffer[i] = b3[i];
 		}
+		
 	}
 
 
 	public void writeData(TransID xid, int tnum, int blockId, byte buffer[])
 	throws IOException, IllegalArgumentException
 	{
+		
 		// see if tree contains the blockId'th block.
 		TNode t = create_TNode(xid, tnum);
+		
 		t.writeBlock(xid, blockId, buffer, disk, bitMap);
-
+		
 		// add write to transaction
 		byte[] buffer2 = new byte[Disk.SECTOR_SIZE];
 		int begin = (tnum/TNODES_PER_SECT);

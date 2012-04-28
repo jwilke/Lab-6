@@ -1,0 +1,38 @@
+		// writeTreeMatadata
+		t.set_method("writeTreeMetaData()");
+		byte[] meta1 = new byte[64];
+		for(int i = 0; i < 64; i++) {
+			meta1[i] = (byte) i;
+		}
+		tnum1 = pt1.createTree(xid1);
+		pt1.writeTreeMetadata(xid1, tnum1, meta1);
+		pt1.commitTrans(xid1);
+		xid1 = pt1.beginTrans();
+		byte[] tnodeArr1 = new byte[512];
+		pt1.disk.readSector(xid1, TNODE_LOCATION + tnum1/5, tnodeArr1);
+		for(int i = 37; i < 64; i++) {
+			t.is_equal(meta1[i-37], tnodeArr1[i]);
+		}
+		
+		
+		
+		
+		// readTreeMetadata
+		t.set_method("readTreeMetaData()");
+		byte[] meta2 = new byte[64];
+		pt1.readTreeMetadata(xid1, tnum1, meta2);
+		t.is_equal(meta1, meta2);
+		
+		
+		
+		
+		
+		// getMaxDataBlockID
+		t.set_method("getMaxDataBlockId");
+		byte[] buffer1 = new byte[1024];
+		t.is_equal(0, pt1.getMaxDataBlockId(xid1, tnum1));
+		pt1.writeData(xid1, tnum1, 2, buffer1);
+		t.is_equal(3, pt1.getMaxDataBlockId(xid1, tnum1));
+		t.is_equal(3, pt1.getMaxDataBlockId(xid1, tnum1));
+		t.is_equal(3, pt1.getMaxDataBlockId(xid1, tnum1));
+		t.is_equal(3, pt1.getMaxDataBlockId(xid1, tnum1));

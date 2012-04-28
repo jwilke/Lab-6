@@ -23,7 +23,6 @@ public class InternalNode {
 		nodes = new InternalNode[PTree.POINTERS_PER_INTERNAL_NODE];
 		for(int i = 0; i < inodes.length; i++) {
 			ptrs[i] = inodes[i];
-			System.out.println("i: " + ptrs[i]);
 			nodes[i] = null;
 		}
 	}
@@ -46,10 +45,13 @@ public class InternalNode {
 		int the_node = (int) (blockID / divisor);
 		// build from b
 		if(nodes[the_node] == null) {
-			int sect = bitmap.first_free_block();
-			nodes[the_node] = new InternalNode(sect, height-1);
-			ptrs[the_node] = sect;
-			//nodes[the_node] = InternalNode.build_from_buffer(TNode.getInternalBuffer(xid, ptrs[the_node], disk), ptrs[the_node], h-1);
+			if(ptrs[the_node] == 0) {
+				int sect = bitmap.first_free_block();
+				nodes[the_node] = new InternalNode(sect, height-1);
+				ptrs[the_node] = sect;
+			} else {
+				nodes[the_node] = InternalNode.build_from_buffer(TNode.getInternalBuffer(xid, ptrs[the_node], disk), ptrs[the_node], h-1);
+			}
 		}
 		nodes[the_node].addBlock(xid, s, bitmap, (int)(blockID - (the_node * divisor)), h-1, disk);
 		

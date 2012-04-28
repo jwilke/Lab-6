@@ -63,7 +63,6 @@ public class FlatFS{
 		int endID = (offset + count - 1) /PTree.BLOCK_SIZE_BYTES;
 		int file_end = disk.getMaxDataBlockId(xid, inumber);
 		
-		System.out.println("begin: " + beginID + " endID: " + endID);
 		if(file_end < endID) {
 			count -= (endID - file_end - 1)*PTree.BLOCK_SIZE_BYTES + in_last_block;
 			endID = file_end;
@@ -92,10 +91,11 @@ public class FlatFS{
 	public void write(TransID xid, int inumber, int offset, int count, byte buffer[])
 	throws IOException, IllegalArgumentException
 	{
+		
 		int max_blocks = disk.getMaxDataBlockId(xid, inumber);
 		int beginID = offset / PTree.BLOCK_SIZE_BYTES;
 		int endID = (offset + count - 1) / PTree.BLOCK_SIZE_BYTES;
-		
+
 		// read first block if needed
 		byte[] bufferOut = new byte[PTree.BLOCK_SIZE_BYTES];
 		if(max_blocks > beginID)
@@ -106,6 +106,7 @@ public class FlatFS{
 		for(int i = offset%1024; i < bufferOut.length; i++, j++) {
 			bufferOut[i] = buffer[j];
 		}
+	
 		disk.writeData(xid, inumber, beginID, bufferOut);
 		
 		// copy middle blocks
@@ -125,7 +126,6 @@ public class FlatFS{
 			bufferOut[i] = buffer[j];
 		}
 		disk.writeData(xid, inumber, endID, bufferOut);
-		System.out.println("final blocks: " + disk.getMaxDataBlockId(xid, inumber));
 	}
 	
 	
@@ -200,11 +200,11 @@ public class FlatFS{
 		t.is_equal(data, test_data);
 		t.is_equal(1023, c);
 		
-		int size = 2049;
+		int size = 4500;
 		data = f.quick_buf(size);
 		test_data = new byte[size];
-		f.write(id, inumber1, 7168, size, data);
-		c = f.read(id, inumber1, 7168, size, test_data);
+		f.write(id, inumber1, 5000, size, data);
+		c = f.read(id, inumber1, 5000, size, test_data);
 		t.is_equal(data, test_data);
 		t.is_equal(c, size);
 		

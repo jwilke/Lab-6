@@ -20,6 +20,7 @@ public class TNode {
 	}
 
 	public int addBlock(TransID xid, int sector, BitMap bitmap, ADisk disk) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
+		
 		if(total_blocks < 8) {
 			for(int i = 0; i < PTree.TNODE_POINTERS; i++) {
 				if(ptrs[i] == 0) {
@@ -28,7 +29,6 @@ public class TNode {
 				}
 			}
 		} else {
-			
 			if(total_blocks == 8 || (total_blocks/8)%256 == 0) {
 				expandHeight(bitmap);
 			}
@@ -36,10 +36,13 @@ public class TNode {
 			double divisor = Math.pow(256, height-1);
 			int the_node = (int) (total_blocks / divisor);
 			if(intNodes[the_node] == null) {
-				int sect = bitmap.first_free_block();
-				intNodes[the_node] = new InternalNode(sect, height-1);
-				ptrs[the_node] = sect;
-				//intNodes[the_node] = InternalNode.build_from_buffer(getInternalBuffer(xid, ptrs[the_node], disk), ptrs[the_node], height-1);
+				if(ptrs[the_node] == 0) {
+					int sect = bitmap.first_free_block();
+					intNodes[the_node] = new InternalNode(sect, height-1);
+					ptrs[the_node] = sect;
+				} else {
+					intNodes[the_node] = InternalNode.build_from_buffer(getInternalBuffer(xid, ptrs[the_node], disk), ptrs[the_node], height-1);
+				}
 			}
 			
 			intNodes[the_node].addBlock(xid, sector, bitmap, (int)(total_blocks - (the_node * divisor)), height-1, disk);
@@ -71,12 +74,11 @@ public class TNode {
 	public void writeBlock(TransID xid, int blockID, byte[] buffer, ADisk disk, BitMap bitmap) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
 		int sect = -1;
 		// increase size if needed
-
 		while(blockID >= total_blocks) {
 			sect = bitmap.first_free_block();
 			addBlock(xid, sect, bitmap, disk);
 		}
-
+		
 		if(total_blocks <= 8) {
 			int sector_num = ptrs[blockID];
 			byte[][] sec_buffers = split_buffer(buffer, 2);
@@ -93,6 +95,7 @@ public class TNode {
 
 			intNodes[the_node].writeBlock(xid, (int)(blockID - (the_node * divisor)), buffer, disk, height-1);
 		}
+		
 	}
 
 	public int get_sector(TransID xid, int blockID, ADisk disk) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
