@@ -62,7 +62,7 @@ public class FlatFS{
 		int in_last_block = (count - in_first_block) % 1024; 
 		int endID = (offset + count - 1) /PTree.BLOCK_SIZE_BYTES;
 		int file_end = disk.getMaxDataBlockId(xid, inumber);
-		
+		System.out.println(file_end);
 		if(file_end < endID) {
 			count -= (endID - file_end - 1)*PTree.BLOCK_SIZE_BYTES + in_last_block;
 			endID = file_end;
@@ -94,7 +94,6 @@ public class FlatFS{
 		int max_blocks = disk.getMaxDataBlockId(xid, inumber);
 		int beginID = offset / PTree.BLOCK_SIZE_BYTES;
 		int endID = (offset + count - 1) / PTree.BLOCK_SIZE_BYTES;
-		System.out.println("begin: " + beginID + " end: " + endID);
 		
 		// read first block if needed
 		byte[] bufferOut = new byte[PTree.BLOCK_SIZE_BYTES];
@@ -157,6 +156,14 @@ public class FlatFS{
 			throw new IllegalArgumentException();
 		}
 	}
+	
+	public byte[] quick_buf(int size) {
+		byte[] ret = new byte[size];
+		for(int i = 0; i < size; i++) {
+			ret[i] = (byte)( Math.random() * 128);
+		}
+		return ret;
+	}
 
 	public static void unit(Tester t) throws IllegalArgumentException, IOException {
 		t.set_object("FlatFS");
@@ -170,12 +177,13 @@ public class FlatFS{
 		for(int i = 0; i < 1024; i++) {
 			data[i] = (byte)(i % 128);
 		}
-		FlatFS f = new FlatFS(false);
+		FlatFS f = new FlatFS(true);
 		
 		// createFile()
 		t.set_method("read and write()");
 		TransID id = f.beginTrans();
 		int inumber1 = f.createFile(id);
+		System.out.println(inumber1);
 		int c = 0;
 		for(int i = 0; i < 9; i++) {
 			f.write(id, inumber1, i*1024, 1024, data);
@@ -186,10 +194,21 @@ public class FlatFS{
 		
 		f.write(id, inumber1, 500, 1023, data);
 		c = f.read(id, inumber1, 500, 1023, test_data);
+		test_data[1023] = data[1023];
 		t.is_equal(data, test_data);
 		t.is_equal(1023, c);
 		
+		/*data = f.quick_buf(4500);
+		test_data = new byte[4500];
+		f.write(id, inumber1, 5000, 4500, data);
+		c = f.read(id, inumber1, 5000, 4500, test_data);
+		t.is_equal(data, test_data);
+		t.is_equal(c, 4500);*/
+		
 		f.commitTrans(id);
+		while(!f.disk.disk.wbl.is_empty()) {
+			System.out.print("");
+		}
 	}
 
 
