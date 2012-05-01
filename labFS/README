@@ -8,7 +8,7 @@ jlw3599
 jake.wilke@gmail.com
 jwilke
 
-Slip Days used: 3
+Slip Days used: 0
 
 ActiveTransactionList.java
 The list of Transaction that are not yet committed
@@ -44,13 +44,16 @@ DiskWorker.java
 Get work from the disk and sends a finish to CallBackTracker
 
 FlatFS.java
-Not used
+Flat file system uses PTree to handle files
+
+InternalNode.java
+The internal node of the tree that points to either data or other internal nodes
 
 LogStatus.java
 Manages the log on disk.
 
 PTree.java
-Not used
+PTree manages the tree structure and the overhead of allocated space, including bit map
 
 ResourceException.java
 Not used
@@ -70,8 +73,8 @@ Holds onto writes that need to go to disk
 TransID.java
 Holds the numeric value of the transaction, keeps them distinct
 
-WorkProducer.java
-not used
+TNode.java
+A structure to represent the Tree roots
 
 WriteBackList.java
 Holds onto the transaction that are committed but not necessarly on disk yet. 
@@ -80,11 +83,16 @@ WriteBackWorker.java
 Takes transaction off the WritebackList and sends to disk. Also takes them off the list when done.
 
 
-The design starts with a transaction at the lowest level. IT contains writes that are going to disk, organized by sector. The ADisk creates one and sends it back to the user. Then using the id for the transaction the user can send writes or commit the writes. Before they are committed they are put ont he ActiveTransactionList, which holds them in a list and allows the user to add more writes to the included transactions. When the ADisk commits the transaction goes to the WriteBackList where it stays until the worker takes it off and sends it to disk. Also during the commit, the information of the Transactions are writen to a log on disk. The transaction can only be written after it is committed to the log.
+Part I design - The design starts with a transaction at the lowest level. IT contains writes that are going to disk, organized by sector. The ADisk creates one and sends it back to the user. Then using the id for the transaction the user can send writes or commit the writes. Before they are committed they are put ont he ActiveTransactionList, which holds them in a list and allows the user to add more writes to the included transactions. When the ADisk commits the transaction goes to the WriteBackList where it stays until the worker takes it off and sends it to disk. Also during the commit, the information of the Transactions are writen to a log on disk. The transaction can only be written after it is committed to the log.
 
-We lock on the transaction class. In here we allow reads to read as much as they wont, until there is a write. When there is a write, then the reads have to wait. The two lists also lock. The writebacklist also has a wait when something tries to get something and it is empty. Lastly the logStatus also has a lock. 
+Part II design - This handles and groups blocks into an ordered tree. The PTree holds onto up to 512 root nodes called TNodes. This are held, five in a sector for the first 103 sectors after the log. When you create, write or add to this trees you will read the information from the disk and construct a TNode object. This will then find the blocks in question to write to. If it has to look to InternalNodes it will also construct them. When it is done a bit is set in the bitmap to show that that sector has been used. 
+
+
+
+
+3. We lock on the transaction class. In here we allow reads to read as much as they wont, until there is a write. When there is a write, then the reads have to wait. The two lists also lock. The writebacklist also has a wait when something tries to get something and it is empty. Lastly the logStatus also has a lock. 
 
 Recovery works with the log. The first 1024 sectors are all part of hte log. The one right after that holds onto the log pointers. The first is the start of the log. This is where the first file that may not be on disk is. This can be moved when we know something is off the log. Also is the current location where there is no more log entries, ie garbage. When a commit happens this info get sent to disk. If the disk fails, it will look at the log and see what transactions are still there. If there are any, they are added to the WriteBackList and treated just like committed transactions.
 
 
-Our testing strategy is to first test all the base aspects of ADisk. Each class is unit tested and every method to make sure that nothing suprising happens. This ended up being more then 1000 tests. Then the ADisk is run with several tests, first with one thread and then with others. We changed how we did the multithreaded version running up to 8 different threads. And each of these tests were run at least 100 times to make sure there was no deadlock. When an error was found the mistake was tracked down. 
+4. Our testing strategy is to first test all the base aspects of ADisk. Each class is unit tested and every method to make sure that nothing suprising happens. This ended up being more then 1000 tests. Then the ADisk is run with several tests, first with one thread and then with others. We changed how we did the multithreaded version running up to 8 different threads. And each of these tests were run at least 100 times to make sure there was no deadlock. When an error was found the mistake was tracked down. 
