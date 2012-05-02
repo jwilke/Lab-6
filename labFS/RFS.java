@@ -11,23 +11,125 @@ import java.io.IOException;
 import java.io.EOFException;
 public class RFS{
 
-	FlatFS disk;
-	int 
+	private FlatFS disk;
+	private final int root = 0;
+	
+	/*
+	 * Meta Data
+	 * 
+	 * 0-31  - name
+	 * 32-33 - inum
+	 * 34-37 - num_files
+	 * 38    - valid?
+	 */
 
 	public RFS(boolean doFormat)
 	throws IOException
 	{
+		disk = new FlatFS(doFormat);
+		if(doFormat) {
+			TransID id = disk.beginTrans();
+			int i = disk.createFile(id);
+			if(i != root) { throw new IllegalStateException("Root was not set up properly"); }
+			
+			byte[] buff = format_metadata("root", root, 0, true);
+			
+			disk.writeFileMetadata(id, root, buff);
+			
+			disk.commitTrans(id);
+		}
 	}
 
-	public void createFile(String filename, boolean openIt)
+	public int createFile(String filename, boolean openIt)
 	throws IOException, IllegalArgumentException
 	{
+		// parse filename
+		String[] filePath = filename.split("//"); // TODO error checking
+		for(String a: filePath) 
+			System.out.println(a);
+		
+		TransID id = disk.beginTrans();
+		
+		// use directories to find file
+		DirEnt current = getRootEntry(id);
+		for( int i = 0; i < filePath.length - 1; i++) {
+			int next = current.get_next_Dir(filePath[i]);
+			if(next == -1) {
+				System.out.println("Directory does not exist.");
+				disk.abortTrans(id);
+				return -1;
+			}
+			current = new DirEnt(next, disk, id);
+		}
+		
+		// create file and get inum
+		int inum = disk.createFile(id);
+		
+		byte[] meta = format_metadata(filePath[filePath.length - 1], inum, 0, false); 
+		disk.writeFileMetadata(id, inum, meta);
+		
+		// TODO add file to directory
+		current.addFile(filePath[filePath.length -1], inum, false);
+		current.print_to_disk(disk, id);
+		
+		//commit to disk
+		disk.commitTrans(id);
+		
+		// if openIt then return file description
+		if(openIt) return inum;
+		
+		return -1;
 	}
+
+	
 
 	public void createDir(String dirname)
 	throws IOException, IllegalArgumentException
 	{
+		// parse filename
+		String[] filePath = dirname.split("//"); // TODO error checking
+		for(String a: filePath) 
+			System.out.println(a);
+		
+		TransID id = disk.beginTrans();
+		
+		// use directories to find file
+		DirEnt current = getRootEntry(id);
+		
+		for( int i = 0; i < filePath.length - 1; i++) {
+			int next = current.get_next_Dir(filePath[i]);
+			if(next == -1) {
+				System.out.println("Directory does not exist.");
+				disk.abortTrans(id);
+				return;
+			}
+			current = new DirEnt(next, disk, id);
+		}
+		
+		// create file and get inum
+		int inum = disk.createFile(id);
+		
+		DirEnt dir = new DirEnt(filePath[filePath.length-1], inum);
+		dir.addFile("..", current.getInum(), true);
+		dir.addFile(".", inum, true);
+		
+		// write files to disk
+		byte[] meta = format_metadata(filePath[filePath.length - 1], inum, 2, true); 
+		disk.writeFileMetadata(id, inum, meta);
+		dir.print_to_disk(disk, id);
+		
+		//  add file to directory
+		current.addFile(filePath[filePath.length -1], inum, true);
+		meta = format_metadata(filePath[filePath.length - 1], current.getInum(), current.getNumFiles(), true);
+		
+		// write current to disk && metadata
+		current.print_to_disk(disk, id);
+		disk.writeFileMetadata(id, current.getInum(), meta);
+		
+		//commit to disk
+		disk.commitTrans(id);
 	}
+
 
 
 	public void unlink(String filename)
@@ -84,7 +186,34 @@ public class RFS{
 		return -1;
 	}
 
+	private DirEnt getRootEntry(TransID id) throws IllegalArgumentException, IOException {
+		return new DirEnt(root, disk, id);
+	}
 
-
-
+	public static byte[] format_metadata(String name, int inumber, int num_files, boolean val) {
+		byte[] data = new byte[PTree.METADATA_SIZE];
+		byte[] ndata = name.getBytes();
+		
+		for(int i =0 ; i < 32 && i < ndata.length; i++) {
+			data[i] = ndata[i];
+		}
+		
+		byte first = (byte) (inumber & 0xFF);
+		byte second = (byte) ((inumber>>8) & 0x1);
+		
+		data[32] = first;
+		data[33] = second;
+		
+		Common.intToByte(num_files, data, 34);
+		
+		if(val) {
+			data[38] = 1;
+		}
+		
+		return data;
+	}
+	
+	public static void unit(Tester t) {
+		t.set_object("RFS");
+	}
 }
