@@ -36,6 +36,10 @@ public class RFS{
 			
 			disk.writeFileMetadata(id, root, buff);
 			
+			DirEnt rootEnt = getRootEntry(id);
+			rootEnt.addFile("..", root, true);
+			rootEnt.addFile(".", root, true);
+			
 			disk.commitTrans(id);
 		}
 	}
