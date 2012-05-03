@@ -79,6 +79,23 @@ public class DirEnt{
 			getFileFromByte(i, temp);
 		}
 	}
+	
+	public boolean change_parent(int inum) {
+		int i = files.indexOf("..");
+		if(i == -1) return false;
+		
+		fileInums.set(i, inum);
+		
+		return true;
+	}
+	
+	public boolean isFile(String name) { //if this name is a file, return true
+		int i = files.indexOf(name);
+		if(i == -1)
+			return false;
+		
+		return !isDir.get(i);
+	}
 
 	private void getFileFromByte(int index, byte[] file) {
 		// read name
@@ -91,8 +108,8 @@ public class DirEnt{
 		}
 
 		// read inum
-		int inum = file[index*FILES_ON_DISK + 32];
-		inum = inum | (file[index*FILES_ON_DISK + 33] << 8);
+		int inum = file[index*FILES_ON_DISK + 32] & 0xFF;
+		inum = inum | ((file[index*FILES_ON_DISK + 33] << 8) & 0xFFFF);
 
 		// read isDir
 		boolean dir = false;
@@ -145,7 +162,7 @@ public class DirEnt{
 	public void addFile(String n, int i, boolean dir) {
 		if(files.contains(n)) {
 			System.out.println("File " + n + " already exists in directory " + new String(name));
-			return;
+			throw new IllegalArgumentException();
 		}
 		files.add(n);
 		fileInums.add(i);
@@ -168,6 +185,13 @@ public class DirEnt{
 
 	public int getNumFiles() {
 		return num_files;
+	}
+	
+	public String getName() {
+		String s = "";
+		for(char c : name)
+			s+=c;
+		return s;
 	}
 
 	public String[] get_list_files() {
