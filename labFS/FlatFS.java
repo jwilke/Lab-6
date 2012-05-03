@@ -168,6 +168,13 @@ public class FlatFS{
 		}
 		return ret;
 	}
+	
+	public int getTotalBlocks(int tnum) throws IllegalArgumentException, IOException {
+		TransID id = disk.beginTrans();
+		int ret =  disk.getMaxDataBlockId(id, tnum) + 1;
+		disk.commitTrans(id);
+		return ret;
+	}
 
 	public static void unit(Tester t) throws IllegalArgumentException, IOException {
 		t.set_object("FlatFS");
