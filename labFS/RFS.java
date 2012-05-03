@@ -69,7 +69,7 @@ public class RFS{
 		byte[] meta = format_metadata(filePath[filePath.length - 1], inum, 0, false); 
 		disk.writeFileMetadata(id, inum, meta);
 
-		// TODO add file to directory
+		// add file to directory
 		current.addFile(filePath[filePath.length -1], inum, false);
 		current.print_to_disk(disk, id);
 
@@ -176,9 +176,9 @@ public class RFS{
 	private DirEnt getCurDir(TransID id, String filename) throws IllegalArgumentException, IOException {
 		// parse filename
 		String[] filePath = filename.split("/");
-		for(int i = 0; i < filePath.length; i++) {
+		/*for(int i = 0; i < filePath.length; i++) {
 			System.out.println(filePath[i]);
-		}
+		}*/
 		// use directories to find file
 		DirEnt current = getRootEntry(id);
 		for( int i = 1; i < filePath.length - 1; i++) {
@@ -448,6 +448,20 @@ public class RFS{
 
 
 		// createFile(String, boolean)
+		t.set_method("createFile()");
+		rfs1 = new RFS(true);
+		
+		int fd1 = rfs1.createFile("/a", false);
+		t.is_equal(-1,fd1);
+		
+		
+		xid1 = rfs1.disk.beginTrans();
+		root1 = rfs1.getRootEntry(xid1);
+		
+		t.is_equal(3, root1.getNumFiles());
+		
+		
+		
 		// createDir(String)
 		// unlink(String)
 		// rename(string, String)

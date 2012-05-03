@@ -163,9 +163,6 @@ public class PTree{
 		// set to not in use
 		disk.commitTransaction(xid);
 		
-		
-		
-		
 		beingUsed = false;
 		// signal
 		inUse.signalAll();
