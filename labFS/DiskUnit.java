@@ -109,6 +109,9 @@ public class DiskUnit implements DiskCallback{
 		RFS.unit(t);
 		
 		t.close();
+		for(int i = 0; i < 10000; i++) {
+			System.out.print("");
+		}
 		System.exit(0);
 	}
 

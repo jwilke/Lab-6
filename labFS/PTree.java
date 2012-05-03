@@ -128,6 +128,7 @@ public class PTree{
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		
 	}
 
 	public TransID beginTrans()

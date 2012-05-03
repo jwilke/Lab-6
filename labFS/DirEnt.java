@@ -185,7 +185,7 @@ public class DirEnt{
 			addFileToByte(i, file);
 		}
 
-		System.out.println((new Tester()).arrayToString(file));
+		//System.out.println((new Tester()).arrayToString(file));
 		disk.write(id, inum, 0, num_files*FILES_ON_DISK, file);
 	}
 

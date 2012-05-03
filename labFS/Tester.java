@@ -438,7 +438,8 @@ public class Tester {
 		for (int i = 0; i < arr.length - 1; i++ ) {
 			out += arr[i] + ", ";
 		}
-		out += arr[arr.length-1] + "]";
+		if(arr.length > 0) out += arr[arr.length-1];
+		out += "]";
 		return out;
 	}
 
