@@ -202,7 +202,23 @@ public class RFS{
 	public String[] readDir(String dirname)
 	throws IOException, IllegalArgumentException
 	{
-		return null;
+		// get directory this file lives in
+		TransID id = disk.beginTrans();
+		DirEnt current = getCurDir(id, dirname);
+		if(current == null) return null;
+		
+		// get the directory itself
+		String[] filePath = dirname.split("//"); // TODO error checking
+		int inumber = current.get_next_Dir(filePath[filePath.length - 1]);
+		if(inumber == -1) return null;
+		current = new DirEnt(inumber, disk, id);
+		
+		// get string array
+		String[] ret = current.get_list_files();
+		
+		disk.commitTrans(id);
+		
+		return ret;
 	}
 
 	public int size(int fd)
