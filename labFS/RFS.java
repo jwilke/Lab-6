@@ -14,6 +14,11 @@ public class RFS{
 	private FlatFS disk;
 	private final int root = 0;
 	
+	//These will be our table of file descriptors. Perhaps a separate class for it?
+	private TransID[] open_fd;	//stores TransID for a given fd
+	private int[] open_ids;
+	private boolean[] avail_fd; //gives index of the fd 0-31;
+	
 	/*
 	 * Meta Data
 	 * 
@@ -42,14 +47,15 @@ public class RFS{
 			
 			disk.commitTrans(id);
 		}
+		
+		open_fd = new TransID[Common.MAX_FD];
+		avail_fd = new boolean[Common.MAX_FD];
 	}
 
 	public int createFile(String filename, boolean openIt)
 	throws IOException, IllegalArgumentException
 	{
-		String[] filePath = filename.split("//"); // TODO error checking
-		for(String a: filePath) 
-			System.out.println(a);
+		String[] filePath = filename.split("/");
 		
 		TransID id = disk.beginTrans();
 		DirEnt current = getCurDir(id, filename);
@@ -79,9 +85,7 @@ public class RFS{
 	public void createDir(String dirname)
 	throws IOException, IllegalArgumentException
 	{
-		String[] filePath = dirname.split("//"); // TODO error checking
-		for(String a: filePath) 
-			System.out.println(a);
+		String[] filePath = dirname.split("/");
 		
 		TransID id = disk.beginTrans();
 		DirEnt current = getCurDir(id, dirname);
@@ -132,11 +136,13 @@ public class RFS{
 		// get current directory this file lives in
 		TransID id = disk.beginTrans();
 		DirEnt current = getCurDir(id, oldName);
-		if(current == null) return;
+		if(current == null) {
+			throw new IllegalArgumentException();
+		}
 		// get new current
 		DirEnt currentNew = getCurDir(id, oldName);
 		if(current == null || currentNew == null) return;
-		String[] filePathOld = oldName.split("//"); // TODO error checking
+		String[] filePathOld = oldName.split("/");
 		
 		// get the file information
 		boolean isDir = true;
@@ -151,7 +157,7 @@ public class RFS{
 		current.deleteFile(filePathOld[filePathOld.length]);
 		
 		// create the new file
-		String[] filePathNew = newName.split("//"); // TODO error checking
+		String[] filePathNew = newName.split("/");
 		currentNew.addFile(filePathNew[filePathNew.length - 1], inumber, isDir);
 		
 		disk.commitTrans(id);
@@ -159,13 +165,11 @@ public class RFS{
 	
 	private DirEnt getCurDir(TransID id, String filename) throws IllegalArgumentException, IOException {
 		// parse filename
-		String[] filePath = filename.split("//"); // TODO error checking
-		for(String a: filePath) 
-			System.out.println(a);
+		String[] filePath = filename.split("/");
 		
 		// use directories to find file
 		DirEnt current = getRootEntry(id);
-		for( int i = 0; i < filePath.length - 1; i++) {
+		for( int i = 1; i < filePath.length - 1; i++) {
 			int next = current.get_next_Dir(filePath[i]);
 			if(next == -1) {
 				System.out.println("Directory does not exist.");
@@ -194,6 +198,7 @@ public class RFS{
 	public int read(int fd, int offset, int count, byte buffer[])
 	throws IOException, IllegalArgumentException
 	{
+		//lookup transid and xid from the fd and pass to the ptree
 		return -1;
 	}
 
@@ -212,7 +217,7 @@ public class RFS{
 		if(current == null) return null;
 		
 		// get the directory itself
-		String[] filePath = dirname.split("//"); // TODO error checking
+		String[] filePath = dirname.split("/");
 		int inumber = current.get_next_Dir(filePath[filePath.length - 1]);
 		if(inumber == -1) return null;
 		current = new DirEnt(inumber, disk, id);
@@ -228,6 +233,9 @@ public class RFS{
 	public int size(int fd)
 	throws IOException, IllegalArgumentException
 	{
+		TransID id = disk.beginTrans();
+		
+		
 		return -1;
 	}
 
