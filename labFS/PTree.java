@@ -301,7 +301,6 @@ public class PTree{
 	public void writeData(TransID xid, int tnum, int blockId, byte buffer[])
 	throws IOException, IllegalArgumentException
 	{
-		
 		// see if tree contains the blockId'th block.
 		TNode t = create_TNode(xid, tnum);
 		

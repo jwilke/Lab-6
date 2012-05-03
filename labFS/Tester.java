@@ -1,15 +1,15 @@
 /*
-	 * Tester.java
-	 *
-	 *  Created on: Dec 23, 2011
-	 *      Author: grahambenevelli
-	 *
-	 *  Last Updaded: March 31, 2011
-	 */
+ * Tester.java
+ *
+ *  Created on: Dec 23, 2011
+ *      Author: grahambenevelli
+ *
+ *  Last Updaded: March 31, 2011
+ */
 
 public class Tester {
-	
-	
+
+
 	private int test;
 	private int failed;
 	private String method;
@@ -26,7 +26,7 @@ public class Tester {
 		test = 0;
 		failed = 0;
 	}
-	
+
 	/**
 	 * acts like destructor, prints final results
 	 * and then resets everything
@@ -39,7 +39,7 @@ public class Tester {
 		} else {
 			System.out.println("Tests Failed");
 		}
-		
+
 		method = null;
 		object = null;
 		test = 0;
@@ -55,9 +55,10 @@ public class Tester {
 	 * @param - string exp: the expected value of this test
 	 * @param - string got: the actual value of this test
 	 */
-	public void print_fail(String var, String exp, String got) {
-		
+	private void print_fail(String var, String exp, String got) {
+
 		System.out.println("Test Failed");
+		System.out.println("Object: " + object);
 		System.out.println("Test: " + test);
 		System.out.println("Method: " + method);
 		System.out.println("Comparing: " + var);
@@ -77,7 +78,7 @@ public class Tester {
 	 * @param - string n: the name of the variable being compared, for
 	 * 						future use
 	 */
-	public void print_fail(String var, String exp, String got, String n) {
+	private void print_fail(String var, String exp, String got, String n) {
 		System.out.println("For Variable: " + n);
 		print_fail(var, exp, got);
 	}
@@ -91,7 +92,7 @@ public class Tester {
 	 * @param - int exp: the expected value of this test
 	 * @param - int got: the actual value of this test
 	 */
-	void print_fail(String var, int exp, int got) {
+	private void print_fail(String var, int exp, int got) {
 		String exps = "" + exp;
 		String gots = "" + got;
 		print_fail(var, exps, gots);
@@ -108,7 +109,7 @@ public class Tester {
 	 * @param - string n: the name of the variable being compared, for
 	 * 						future use
 	 */
-	void print_fail(String var, int exp, int got, String n) {
+	private void print_fail(String var, int exp, int got, String n) {
 		System.out.println("For Variable: " + n);
 		print_fail(var, exp, got);
 	}
@@ -122,7 +123,7 @@ public class Tester {
 	 * @param - char exp: the expected value of this test
 	 * @param - char got: the actual value of this test
 	 */
-	public void print_fail(String var, char exp, char got) {
+	private void print_fail(String var, char exp, char got) {
 		String exps = "" + exp;
 		String gots = "" + got;
 		print_fail(var, exps, gots);
@@ -137,7 +138,7 @@ public class Tester {
 	 * @param - char exp: the expected value of this test
 	 * @param - char got: the actual value of this test
 	 */
-	public void print_fail(String var, char exp, char got, String n) {
+	private void print_fail(String var, char exp, char got, String n) {
 		String exps = "" + exp;
 		String gots = "" + got;
 		print_fail(var, exps, gots, n);
@@ -152,7 +153,7 @@ public class Tester {
 	 * @param - double exp: the expected value of this test
 	 * @param - double got: the actual value of this test
 	 */
-	public void print_fail(String var, double exp, double got) {
+	private void print_fail(String var, double exp, double got) {
 		String exps = "" + exp;
 		String gots = "" + got;
 		print_fail(var, exps, gots);
@@ -167,7 +168,7 @@ public class Tester {
 	 * @param - double exp: the expected value of this test
 	 * @param - double got: the actual value of this test
 	 */
-	public void print_fail(String var, double exp, double got, String n) {
+	private void print_fail(String var, double exp, double got, String n) {
 		String exps = "" + exp;
 		String gots = "" + got;
 		print_fail(var, exps, gots, n);
@@ -356,7 +357,7 @@ public class Tester {
 			return true;
 		}
 	}
-	
+
 	public boolean is_equal(Object o1, Object o2) {
 		test++;
 		if (!((o1 == null && o2 == null) || (o1 != null && o1.equals(o2)))) {
@@ -378,8 +379,8 @@ public class Tester {
 			return true;
 		}
 	}
-	
-	
+
+
 	/**
 	 * Test two arrays are equal
 	 * @param i1
@@ -404,7 +405,7 @@ public class Tester {
 		}
 		return true;
 	}
-	
+
 	public boolean is_equal(int[] i1, int[] i2) {
 		test++;
 		if(i1.length != i2.length) {
@@ -422,7 +423,7 @@ public class Tester {
 		}
 		return true;
 	}
-	
+
 	public String arrayToString(int[] arr) {
 		String out = "[";
 		for (int i = 0; i < arr.length - 1; i++ ) {
@@ -431,7 +432,7 @@ public class Tester {
 		out += arr[arr.length-1] + "]";
 		return out;
 	}
-	
+
 	public String arrayToString(byte[] arr) {
 		String out = "[";
 		for (int i = 0; i < arr.length - 1; i++ ) {
@@ -440,7 +441,16 @@ public class Tester {
 		out += arr[arr.length-1] + "]";
 		return out;
 	}
-	
+
+	public String arrayToString(char[] arr) {
+		String out = "[";
+		for (int i = 0; i < arr.length - 1; i++ ) {
+			out += arr[i] + ", ";
+		}
+		out += arr[arr.length-1] + "]";
+		return out;
+	}
+
 	/**
 	 * Test two arrays are equal
 	 * @param b1
@@ -465,7 +475,7 @@ public class Tester {
 		}
 		return true;
 	}
-	
+
 	public boolean is_equal(byte[] b1, byte[] b2) {
 		test++;
 		if(b1.length != b2.length) {
@@ -476,6 +486,44 @@ public class Tester {
 			for (int i = 0; i < b1.length; i++) {
 				if (b1[i] != b2[i]) {
 					print_fail("int[]", arrayToString(b1), arrayToString(b2));
+					failed++;
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+
+
+	public boolean is_equal(char[] b1, char[] b2) {
+		test++;
+		if(b1.length != b2.length) {
+			print_fail("int[]", arrayToString(b1), arrayToString(b2));
+			failed++;
+			return false;
+		} else {
+			for (int i = 0; i < b1.length; i++) {
+				if (b1[i] != b2[i]) {
+					print_fail("int[]", arrayToString(b1), arrayToString(b2));
+					failed++;
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	public boolean is_equal(char[] b1, char[] b2, String n) {
+		test++;
+		if(b1.length != b2.length) {
+			print_fail("int[]", arrayToString(b1), arrayToString(b2), n + ": size");
+			failed++;
+			return false;
+		} else {
+			for (int i = 0; i < b1.length; i++) {
+				if (b1[i] != b2[i]) {
+					print_fail("int[]", arrayToString(b1), arrayToString(b2), n + ": Array[" + i + "]");
 					failed++;
 					return false;
 				}

@@ -103,11 +103,13 @@ public class FlatFS{
 		
 		// copy first block
 		int j = 0;
-		for(int i = offset%1024; i < bufferOut.length; i++, j++) {
+		for(int i = offset%1024; i < bufferOut.length && i < buffer.length; i++, j++) {
 			bufferOut[i] = buffer[j];
 		}
-	
+		
 		disk.writeData(xid, inumber, beginID, bufferOut);
+		
+		if(beginID == endID) return;
 		
 		// copy middle blocks
 		for(int i = beginID + 1; i < endID; i++) {
@@ -207,6 +209,8 @@ public class FlatFS{
 		c = f.read(id, inumber1, 5000, size, test_data);
 		t.is_equal(data, test_data);
 		t.is_equal(c, size);
+		
+		
 		
 		f.commitTrans(id);
 		while(!f.disk.disk.wbl.is_empty()) {

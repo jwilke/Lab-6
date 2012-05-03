@@ -193,9 +193,8 @@ public class RFS{
 	public static byte[] format_metadata(String name, int inumber, int num_files, boolean val) {
 		byte[] data = new byte[PTree.METADATA_SIZE];
 		byte[] ndata = name.getBytes();
-		
-		for(int i =0 ; i < 32 && i < ndata.length; i++) {
-			data[i] = ndata[i];
+		for(int i =0 ; i < 32 && i/2 < ndata.length; i+=2) {
+			data[i] = ndata[i/2];
 		}
 		
 		byte first = (byte) (inumber & 0xFF);

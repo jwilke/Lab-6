@@ -20,7 +20,7 @@ public class DirEnt{
 	private ArrayList<String> files;
 	private ArrayList<Integer> fileInums;
 	private ArrayList<Boolean> isDir;
-	
+
 	/*
 	 * Meta Data
 	 * 
@@ -29,7 +29,7 @@ public class DirEnt{
 	 * 34-37 - num_files
 	 * 38    - valid?
 	 */
-	
+
 	public final static int FILES_ON_DISK = 35;
 	/*
 	 * Files on Disk
@@ -38,7 +38,7 @@ public class DirEnt{
 	 * 32-33 - inum
 	 * 34	 - directory?
 	 */
-	
+
 	public DirEnt(String n, int inumber) {
 		char[] temp = n.toCharArray();
 		for(int i = 0; i < temp.length && i < MAX_NAME_LEN_CHAR; i++) {
@@ -47,76 +47,81 @@ public class DirEnt{
 		inum = inumber;
 		valid = true;
 		num_files = 0;
+		files = new ArrayList<String>();
+		fileInums = new ArrayList<Integer>();
+		isDir = new ArrayList<Boolean>();
 	}
-	
+
 	public DirEnt(int inumber, FlatFS disk, TransID id) throws IllegalArgumentException, IOException {
 		// read meta data and build from that
 		byte[] meta = new byte[PTree.METADATA_SIZE];
 		disk.readFileMetadata(id, inumber, meta);
 		for(int i = 0; i < 32; i+=2) {
 			char c = (char) meta[i];
-			c = (char) (c & (meta[i+1] << 8)); // TODO maybe flip
+			c = (char) (c | (meta[i+1] << 8));
 			name[i/2] = c;
 		}
-		System.out.println(name);
 		
+		files = new ArrayList<String>();
+		fileInums = new ArrayList<Integer>();
+		isDir = new ArrayList<Boolean>();
+
 		inum = inumber;
 		num_files = Common.byteToInt(meta, 34);
 		valid = true;
-		
-		
-		// read blocks and get included files
+
+
+		/*// read blocks and get included files
 		byte[] temp = new byte[FILES_ON_DISK];
 		for(int i = 0; i < num_files; i++) {
 			disk.read(id, inum, i * FILES_ON_DISK, FILES_ON_DISK, temp);
 			read_file_data(temp);
+		}*/
+		byte[] temp = new byte[FILES_ON_DISK * num_files];
+		disk.read(id, inumber, 0, FILES_ON_DISK * num_files, temp);
+		for(int i = 0; i < num_files; i++) {
+			getFileFromByte(i, temp);
 		}
 	}
-	
-	private void read_file_data(byte[] file) {
+
+	private void getFileFromByte(int index, byte[] file) {
 		// read name
-		String n = "";
+		StringBuilder n = new StringBuilder();
 		for(int i = 0; i < 32; i+=2) {
-			char c = (char) file[i];
-			c = (char) (c & (file[i+1] << 8)); // TODO maybe flip
-			n += c;
+			int c = file[index*FILES_ON_DISK + i];
+			c = (c | (file[index*FILES_ON_DISK + i+1] << 8));
+			if(c == 0) break;
+			n.append((char) c);
 		}
-		
+
 		// read inum
-		int inum = file[32];
-		inum = inum & (file[33] << 8);
-		
+		int inum = file[index*FILES_ON_DISK + 32];
+		inum = inum | (file[index*FILES_ON_DISK + 33] << 8);
+
 		// read isDir
 		boolean dir = false;
-		if(file[34] == 1) dir = true;
-		
-		files.add(n);
-		fileInums.add(inum);
-		isDir.add(dir);
+		if(file[index*FILES_ON_DISK + 34] == 1) dir = true;
+
+		addFile(n.toString(), inum, dir);
+		num_files--;
 	}
-	
-	private byte[] write_file_data() {
-		byte[] file = new byte[num_files*FILES_ON_DISK];
-		
+
+	private void addFileToByte(int index, byte[] file) {
 		byte[] tempname;
-		for(int x = 0; x < num_files; x++) {
-			tempname = files.get(x).getBytes();
-			for(int i = 0; i < tempname.length; i++) {
-				file[x*FILES_ON_DISK+i] = tempname[i];
-			}
-			
-			byte first = (byte) (fileInums.get(x) & 0xFF);
-			byte second = (byte) ((fileInums.get(x)>>8) & 0x1);
-			
-			file[x*FILES_ON_DISK+32] = first;
-			file[x*FILES_ON_DISK+33] = second;
-			
-			if(isDir.get(x)) {
-				file[x*FILES_ON_DISK+34] = 1;
-			}
+		tempname = files.get(index).getBytes();
+		for(int i = 0; i < tempname.length; i++) {
+			file[index*FILES_ON_DISK+i] = tempname[i];
 		}
-		
-		return file;
+
+		byte first = (byte) (fileInums.get(index) & 0xFF);
+		byte second = (byte) ((fileInums.get(index)>>8) & 0x1);
+
+		file[index*FILES_ON_DISK+32] = first;
+		file[index*FILES_ON_DISK+33] = second;
+
+		if(isDir.get(index)) {
+			file[index*FILES_ON_DISK+34] = 1;
+		}
 	}
 
 	public int get_next_Dir(String dname) {
@@ -129,7 +134,7 @@ public class DirEnt{
 		}
 		return -1;
 	}
-	
+
 	public int get_next_File(String fname) {
 		for(int i = 0; i < num_files; i++) {
 			if(!isDir.get(i)) {
@@ -142,10 +147,23 @@ public class DirEnt{
 	}
 
 	public void addFile(String n, int i, boolean dir) {
+		if(files.contains(n)) {
+			System.out.println("File " + n + " already exists in directory " + new String(name));
+			return;
+		}
 		files.add(n);
 		fileInums.add(i);
 		isDir.add(dir);
 		num_files++;
+	}
+
+	public void deleteFile(String n) {
+		int i = files.indexOf(n);
+		if(i == -1) return;
+		files.remove(i);
+		fileInums.remove(i);
+		isDir.remove(i);
+		num_files--;
 	}
 
 	public int getInum() {
@@ -155,12 +173,304 @@ public class DirEnt{
 	public int getNumFiles() {
 		return num_files;
 	}
-	
+
 	public String[] get_list_files() {
-		return (String[]) files.toArray();
+		String[] ret = new String[files.size()];
+		for(int i = 0; i < ret.length; i++) {
+			ret[i] = files.get(i);
+		}
+		return ret;
 	}
-	
+
 	public void print_to_disk(FlatFS disk, TransID id) throws IllegalArgumentException, IOException {
-		disk.write(id, inum, 0, num_files*FILES_ON_DISK, write_file_data());
+		byte[] file = new byte[num_files*FILES_ON_DISK];
+
+		for(int i = 0; i < num_files; i++) {
+			addFileToByte(i, file);
+		}
+
+		disk.write(id, inum, 0, num_files*FILES_ON_DISK, file);
+	}
+
+
+	public static void unit(Tester t) throws IOException {
+		t.set_object("DirEnt");
+
+		// constructor(String, int)
+		t.set_method("Constructor(String, int)");
+		DirEnt dr1 = new DirEnt("directory", 1);
+		t.is_equal(1, dr1.inum);
+		t.is_equal(0, dr1.num_files);
+		char[] charArr = "directory".toCharArray();
+		int index;
+		for(index = 0; index < charArr.length; index++) {
+			t.is_equal(charArr[index], dr1.name[index]);
+		}
+		for( ; index < dr1.name.length; index++) {
+			t.is_equal((char) 0, dr1.name[index]);
+		}
+		t.is_true(dr1.files != null);
+		t.is_equal(0, dr1.files.size());
+		t.is_true(dr1.fileInums != null);
+		t.is_equal(0, dr1.fileInums.size());
+		t.is_true(dr1.isDir != null);
+		t.is_equal(0, dr1.isDir.size());
+
+
+
+
+
+		// getInum
+		t.set_method("getInum()");
+		dr1 = new DirEnt("directory", 1);
+		t.is_equal(1, dr1.getInum());
+		dr1 = new DirEnt("directory", 511);
+		t.is_equal(511, dr1.getInum());
+		dr1 = new DirEnt("directory", 100);
+		t.is_equal(100, dr1.getInum());
+
+
+
+
+		// addFile
+		dr1 = new DirEnt("directory", 1);
+		dr1.addFile("a", 2, true);
+		t.is_equal("a", dr1.files.get(0));
+		t.is_equal(2, dr1.fileInums.get(0).intValue());
+		t.is_equal(true, dr1.isDir.get(0));
+		t.is_equal(1, dr1.num_files);
+
+		dr1.addFile("b", 3, false);
+		t.is_equal("b", dr1.files.get(1));
+		t.is_equal(3, dr1.fileInums.get(1).intValue());
+		t.is_equal(false, dr1.isDir.get(1));
+		t.is_equal(2, dr1.num_files);
+
+		dr1.addFile("c", 4, true);
+		t.is_equal("c", dr1.files.get(2));
+		t.is_equal(4, dr1.fileInums.get(2).intValue());
+		t.is_equal(true, dr1.isDir.get(2));
+		t.is_equal(3, dr1.num_files);
+
+		dr1.addFile("d", 5, false);
+		t.is_equal("d", dr1.files.get(3));
+		t.is_equal(5, dr1.fileInums.get(3).intValue());
+		t.is_equal(false, dr1.isDir.get(3));
+		t.is_equal(4, dr1.num_files);
+
+		dr1.addFile("e", 6, true);
+		t.is_equal("e", dr1.files.get(4));
+		t.is_equal(6, dr1.fileInums.get(4).intValue());
+		t.is_equal(true, dr1.isDir.get(4));
+		t.is_equal(5, dr1.num_files);
+
+		dr1.addFile("e", 6, true);
+		t.is_equal(5, dr1.num_files);
+
+
+
+
+
+		// getNumFiles
+		t.set_method("getNumFiles()");
+		dr1 = new DirEnt("directory", 1);
+		t.is_equal(0, dr1.getNumFiles());
+		dr1.addFile("a", 2, true);
+		t.is_equal(1, dr1.getNumFiles());
+		dr1.addFile("b", 3, false);
+		t.is_equal(2, dr1.getNumFiles());
+		dr1.addFile("c", 4, true);
+		t.is_equal(3, dr1.getNumFiles());
+		dr1.addFile("d", 5, true);
+		t.is_equal(4, dr1.getNumFiles());
+		dr1.addFile("e", 6, true);
+		t.is_equal(5, dr1.getNumFiles());
+		dr1.addFile("f", 7, true);
+		t.is_equal(6, dr1.getNumFiles());
+
+
+
+
+
+		// deleteFile
+		t.set_method("deleteFile(String)");
+		dr1.deleteFile("f");
+		t.is_equal(5, dr1.getNumFiles());
+		t.is_equal(5, dr1.files.size());
+		t.is_equal(5, dr1.fileInums.size());
+		t.is_equal(5, dr1.isDir.size());
+		dr1.deleteFile("f");
+		t.is_equal(5, dr1.getNumFiles());
+		t.is_equal(5, dr1.files.size());
+		t.is_equal(5, dr1.fileInums.size());
+		t.is_equal(5, dr1.isDir.size());
+		dr1.deleteFile("a");
+		t.is_equal(4, dr1.getNumFiles());
+		t.is_equal(4, dr1.files.size());
+		t.is_equal(4, dr1.fileInums.size());
+		t.is_equal(4, dr1.isDir.size());
+		t.is_equal("b", dr1.files.get(0));
+		t.is_equal(3, dr1.fileInums.get(0).intValue());
+		t.is_equal(false, dr1.isDir.get(0));
+
+
+
+		// get_list_files
+		t.set_method("get_list_files()");
+		String[] fileNames = dr1.get_list_files();
+		t.is_equal("b", fileNames[0]);
+		t.is_equal("c", fileNames[1]);
+		t.is_equal("d", fileNames[2]);
+		t.is_equal("e", fileNames[3]);
+
+
+
+
+
+
+		// get_next_Dir(String)
+		t.set_method("get_next_dir(String)");
+		dr1 = new DirEnt("directory", 1);
+		dr1.addFile("a", 2, true);
+		dr1.addFile("b", 3, false);
+		dr1.addFile("c", 4, true);
+		dr1.addFile("d", 5, false);
+		dr1.addFile("e", 6, true);
+		dr1.addFile("f", 7, false);
+		dr1.addFile("g", 8, true);
+		dr1.addFile("h", 9, false);
+		dr1.addFile("i", 10, true);
+		dr1.addFile("j", 11, false);
+		dr1.addFile("k", 12, true);
+		dr1.addFile("l", 13, false);
+
+		t.is_equal(2, dr1.get_next_Dir("a"));
+		t.is_equal(-1, dr1.get_next_Dir("b"));
+		t.is_equal(4, dr1.get_next_Dir("c"));
+		t.is_equal(-1, dr1.get_next_Dir("d"));
+		t.is_equal(6, dr1.get_next_Dir("e"));
+		t.is_equal(-1, dr1.get_next_Dir("f"));
+		t.is_equal(8, dr1.get_next_Dir("g"));
+		t.is_equal(-1, dr1.get_next_Dir("h"));
+		t.is_equal(10, dr1.get_next_Dir("i"));
+		t.is_equal(-1, dr1.get_next_Dir("j"));
+		t.is_equal(12, dr1.get_next_Dir("k"));
+		t.is_equal(-1, dr1.get_next_Dir("l"));
+		t.is_equal(-1, dr1.get_next_Dir("m"));
+
+
+
+
+
+
+
+		// get_next_file(String)
+		t.set_method("get_next_Files(String)");
+		t.is_equal(-1, dr1.get_next_File("a"));
+		t.is_equal(3, dr1.get_next_File("b"));
+		t.is_equal(-1, dr1.get_next_File("c"));
+		t.is_equal(5, dr1.get_next_File("d"));
+		t.is_equal(-1, dr1.get_next_File("e"));
+		t.is_equal(7, dr1.get_next_File("f"));
+		t.is_equal(-1, dr1.get_next_File("g"));
+		t.is_equal(9, dr1.get_next_File("h"));
+		t.is_equal(-1, dr1.get_next_File("i"));
+		t.is_equal(11, dr1.get_next_File("j"));
+		t.is_equal(-1, dr1.get_next_File("k"));
+		t.is_equal(13, dr1.get_next_File("l"));
+		t.is_equal(-1, dr1.get_next_File("m"));
+
+
+
+
+
+
+		// addFileToByte(int byte[])
+		t.set_method("addFileToByte()");
+		byte[] b1 = new byte[35*dr1.num_files];
+		for(index = 0; index < dr1.num_files; index++) {
+			dr1.addFileToByte(index, b1);
+			t.is_equal(((byte) 'a') + index, b1[+index*FILES_ON_DISK]);
+			for(int i = 1; i < 32; i++) {
+				t.is_equal(0, b1[i+index*FILES_ON_DISK]);
+			}
+			t.is_equal(2+index, b1[32+index*FILES_ON_DISK]);
+			t.is_equal(0, b1[33+index*FILES_ON_DISK]);
+			t.is_equal((2+index+1)%2, b1[34+index*FILES_ON_DISK]);
+		}
+
+
+		
+		
+
+
+		// getFileFromByte(int, byte[])
+		DirEnt dr2 = new DirEnt("directory", 1);
+		dr2.getFileFromByte(0, b1);
+		t.is_equal(0, dr2.num_files);
+		t.is_equal(1, dr2.files.size());
+		t.is_equal(1, dr2.fileInums.size());
+		t.is_equal(1, dr2.isDir.size());
+		t.is_equal("a", dr2.files.get(0));
+		t.is_equal(2, dr2.fileInums.get(0).intValue());
+		t.is_equal(true, dr2.isDir.get(0));
+		
+		dr2.getFileFromByte(1, b1);
+		t.is_equal(0, dr2.num_files);
+		t.is_equal(2, dr2.files.size());
+		t.is_equal(2, dr2.fileInums.size());
+		t.is_equal(2, dr2.isDir.size());
+		t.is_equal("b", dr2.files.get(1));
+		t.is_equal(3, dr2.fileInums.get(1).intValue());
+		t.is_equal(false, dr2.isDir.get(1));
+		
+		dr2.getFileFromByte(2, b1);
+		t.is_equal(0, dr2.num_files);
+		t.is_equal(3, dr2.files.size());
+		t.is_equal(3, dr2.fileInums.size());
+		t.is_equal(3, dr2.isDir.size());
+		t.is_equal("c", dr2.files.get(2));
+		t.is_equal(4, dr2.fileInums.get(2).intValue());
+		t.is_equal(true, dr2.isDir.get(2));
+		
+		
+		
+		
+		
+		
+		// print_to_disk
+		t.set_method("print_to_disk");
+		FlatFS ffs1 = new FlatFS(false);
+		TransID id1 = ffs1.beginTrans();
+		int inum1 = ffs1.createFile(id1);
+		dr1.inum = inum1;
+		dr1.print_to_disk(ffs1, id1);
+		byte[] meta1 = RFS.format_metadata("directory", dr1.inum, dr1.num_files, true);
+		ffs1.writeFileMetadata(id1, dr1.inum, meta1);
+		ffs1.commitTrans(id1);
+		id1 = ffs1.beginTrans();
+		
+		byte[] b2 = new byte[dr1.num_files*FILES_ON_DISK];
+		ffs1.read(id1, dr1.inum, 0, dr1.num_files*FILES_ON_DISK, b2);
+		t.is_equal(b1, b2);
+		
+		
+		
+		// constructor(int, FlatFS, TransID)
+		t.set_method("constructor(int, FlatFS, TransID");
+		dr2 = new DirEnt(dr1.inum, ffs1, id1);
+		t.is_equal(dr1.inum, dr2.inum);
+		t.is_equal(dr1.num_files, dr2.num_files);
+		t.is_equal(dr1.name, dr2.name);
+		for(int i = 0; i < dr1.num_files; i++) {
+			t.is_equal(dr1.files.get(i), dr2.files.get(i));
+			t.is_equal(dr1.fileInums.get(i), dr2.fileInums.get(i));
+			t.is_equal(dr1.isDir.get(i), dr2.isDir.get(i));
+		}
+		
+
+		for(int i = 0; i < 10000; i++) {
+			System.out.print("");
+		}
 	}
 }

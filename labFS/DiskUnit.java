@@ -97,10 +97,14 @@ public class DiskUnit implements DiskCallback{
 		InternalNode.unit(t);*/
 		//System.out.println("Testing PTree");
 		//PTree.unit(t);
-		System.out.println("Testing FlatFS");
+		/*System.out.println("Testing FlatFS");
 		FlatFS.unit(t);
 		
-		System.out.println();
+		System.out.println();*/
+		
+		System.out.println("Testing DirEnt");
+		DirEnt.unit(t);
+		
 		t.close();
 		System.exit(0);
 	}

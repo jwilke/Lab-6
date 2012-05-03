@@ -74,6 +74,7 @@ public class TNode {
 	public void writeBlock(TransID xid, int blockID, byte[] buffer, ADisk disk, BitMap bitmap) throws IllegalArgumentException, IndexOutOfBoundsException, IOException {
 		int sect = -1;
 		// increase size if needed
+		
 		while(blockID >= total_blocks) {
 			sect = bitmap.first_free_block();
 			addBlock(xid, sect, bitmap, disk);
