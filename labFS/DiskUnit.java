@@ -103,7 +103,7 @@ public class DiskUnit implements DiskCallback{
 		System.out.println();*/
 		
 		System.out.println("Testing DirEnt");
-		DirEnt.unit(t);
+		//DirEnt.unit(t);
 		
 		System.out.println("Testing RFS");
 		RFS.unit(t);

@@ -440,7 +440,7 @@ public class DirEnt{
 		
 		// print_to_disk
 		t.set_method("print_to_disk");
-		FlatFS ffs1 = new FlatFS(false);
+		FlatFS ffs1 = new FlatFS(true);
 		TransID id1 = ffs1.beginTrans();
 		int inum1 = ffs1.createFile(id1);
 		dr1.inum = inum1;

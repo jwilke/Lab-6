@@ -15,9 +15,9 @@ public class RFS{
 	private final int root = 0;
 	
 	//These will be our table of file descriptors. Perhaps a separate class for it?
-	private TransID[] open_fd;	//stores TransID for a given fd
-	private int[] open_ids;
-	private boolean[] avail_fd; //gives index of the fd 0-31;
+	private TransID open_xid;	//stores TransID for a given fd
+	private int open_in;
+	private boolean avail_fd;
 	
 	/*
 	 * Meta Data
@@ -48,8 +48,9 @@ public class RFS{
 			disk.commitTrans(id);
 		}
 		
-		open_fd = new TransID[Common.MAX_FD];
-		avail_fd = new boolean[Common.MAX_FD];
+		open_xid = null;
+		open_in = -1;
+		avail_fd = true;
 	}
 
 	public int createFile(String filename, boolean openIt)
@@ -75,7 +76,15 @@ public class RFS{
 		disk.commitTrans(id);
 		
 		// if openIt then return file description
-		if(openIt) return inum;
+		if(openIt) {
+			int fd = -1;
+			try {
+				fd = open(filename);
+			} catch (IllegalArgumentException e) {
+				return -1;
+			}
+			return fd;
+		}
 		
 		return -1;
 	}
@@ -185,13 +194,42 @@ public class RFS{
 	public int open(String filename)
 	throws IOException, IllegalArgumentException
 	{
-		return -1;
+		if(!avail_fd) {
+			throw new IllegalArgumentException();
+		}
+		TransID id = disk.beginTrans();
+		String[] file = filename.split("/");
+		
+		DirEnt current = getCurDir(id, filename);
+		if(current == null) {
+			disk.abortTrans(id);
+			throw new IllegalArgumentException();
+		}
+		
+		int inum = current.get_next_File(file[file.length-1]);
+		if(inum == -1) {
+			disk.abortTrans(id);
+			throw new IllegalArgumentException();
+		}
+		
+		open_xid = id;
+		open_in = inum;
+		avail_fd = false;
+		
+		return 1;
 	}
 
 
 	public void close(int fd)
 	throws IOException, IllegalArgumentException
 	{
+		if(avail_fd) {
+			throw new IllegalArgumentException();
+		}
+		disk.commitTrans(open_xid);
+		open_xid = null;
+		open_in = -1;
+		avail_fd = true;
 	}
 
 
@@ -199,13 +237,22 @@ public class RFS{
 	throws IOException, IllegalArgumentException
 	{
 		//lookup transid and xid from the fd and pass to the ptree
-		return -1;
+		if(avail_fd == true && fd != 1) {
+			throw new IllegalArgumentException();
+		}
+		
+		return disk.read(open_xid, open_in, offset, count, buffer);
 	}
 
 
 	public void write(int fd, int offset, int count, byte buffer[])
 	throws IOException, IllegalArgumentException
 	{
+		if(avail_fd == true && fd != 1) {
+			throw new IllegalArgumentException();
+		}
+		
+		disk.write(open_xid, open_in, offset, count, buffer);
 	}
 
 	public String[] readDir(String dirname)
@@ -233,10 +280,11 @@ public class RFS{
 	public int size(int fd)
 	throws IOException, IllegalArgumentException
 	{
-		TransID id = disk.beginTrans();
+		if(avail_fd == true && fd != 1) {
+			throw new IllegalArgumentException();
+		}
 		
-		
-		return -1;
+		return disk.getTotalBlocks(open_in) * PTree.BLOCK_SIZE_BYTES;
 	}
 
 	public int space(int fd)
