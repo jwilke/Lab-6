@@ -261,5 +261,54 @@ public class RFS{
 	
 	public static void unit(Tester t) {
 		t.set_object("RFS");
+		
+		// format_metadata(String, int, int, boolean)
+		t.set_method("format_metadata(String, int, int, boolean)");
+		byte[] meta1 = RFS.format_metadata("root", 0, 2, true);
+		for(int i = 0; i < "root".length(); i++) {
+			t.is_equal((byte) "root".charAt(i), meta1[i*2]);
+		}
+		t.is_equal(0, meta1[32]);
+		t.is_equal(0, meta1[33]);
+		t.is_equal(2, Common.byteToInt(meta1, 34));
+		t.is_equal(1, meta1[38]);
+		
+		meta1 = RFS.format_metadata("directory", 127, 23, true);
+		for(int i = 0; i < "directory".length(); i++) {
+			t.is_equal((byte) "directory".charAt(i), meta1[i*2]);
+		}
+		t.is_equal(127, meta1[32]);
+		t.is_equal(0, meta1[33]);
+		t.is_equal(23, Common.byteToInt(meta1, 34));
+		t.is_equal(1, meta1[38]);
+		
+		meta1 = RFS.format_metadata("file", 27, 0, false);
+		for(int i = 0; i < "file".length(); i++) {
+			t.is_equal((byte) "file".charAt(i), meta1[i*2]);
+		}
+		t.is_equal(27, meta1[32]);
+		t.is_equal(0, meta1[33]);
+		t.is_equal(0, Common.byteToInt(meta1, 34));
+		t.is_equal(0, meta1[38]);
+		
+		
+		
+		
+		
+		// constructor(boolean)
+		// getRootEntry(TransID)
+		// getCurDirDir(TransID, String)
+		// createFile(String, boolean)
+		// createDir(String)
+		// unlink(String)
+		// rename(string, String)
+		// size
+		// space
+		// readDir
+		// open(string)
+		// close(int)
+		// read
+		// write
+		
 	}
 }
