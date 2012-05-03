@@ -43,24 +43,13 @@ public class RFS{
 	public int createFile(String filename, boolean openIt)
 	throws IOException, IllegalArgumentException
 	{
-		// parse filename
 		String[] filePath = filename.split("//"); // TODO error checking
 		for(String a: filePath) 
 			System.out.println(a);
 		
 		TransID id = disk.beginTrans();
-		
-		// use directories to find file
-		DirEnt current = getRootEntry(id);
-		for( int i = 0; i < filePath.length - 1; i++) {
-			int next = current.get_next_Dir(filePath[i]);
-			if(next == -1) {
-				System.out.println("Directory does not exist.");
-				disk.abortTrans(id);
-				return -1;
-			}
-			current = new DirEnt(next, disk, id);
-		}
+		DirEnt current = getCurDir(id, filename);
+		if(current == null) return -1;
 		
 		// create file and get inum
 		int inum = disk.createFile(id);
@@ -86,25 +75,13 @@ public class RFS{
 	public void createDir(String dirname)
 	throws IOException, IllegalArgumentException
 	{
-		// parse filename
 		String[] filePath = dirname.split("//"); // TODO error checking
 		for(String a: filePath) 
 			System.out.println(a);
 		
 		TransID id = disk.beginTrans();
-		
-		// use directories to find file
-		DirEnt current = getRootEntry(id);
-		
-		for( int i = 0; i < filePath.length - 1; i++) {
-			int next = current.get_next_Dir(filePath[i]);
-			if(next == -1) {
-				System.out.println("Directory does not exist.");
-				disk.abortTrans(id);
-				return;
-			}
-			current = new DirEnt(next, disk, id);
-		}
+		DirEnt current = getCurDir(id, dirname);
+		if(current == null) return;
 		
 		// create file and get inum
 		int inum = disk.createFile(id);
@@ -135,11 +112,65 @@ public class RFS{
 	public void unlink(String filename)
 	throws IOException, IllegalArgumentException
 	{
+		TransID id = disk.beginTrans();
+		DirEnt current = getCurDir(id, filename);
+		if(current == null) return;
+		
+		int inumber = current.get_next_File(filename);
+		current.deleteFile(filename);
+		disk.deleteFile(id, inumber);
+		disk.commitTrans(id);
 	}
 
 	public void rename(String oldName, String newName)
 	throws IOException, IllegalArgumentException
 	{
+		// get current directory this file lives in
+		TransID id = disk.beginTrans();
+		DirEnt current = getCurDir(id, oldName);
+		if(current == null) return;
+		// get new current
+		DirEnt currentNew = getCurDir(id, oldName);
+		if(current == null || currentNew == null) return;
+		String[] filePathOld = oldName.split("//"); // TODO error checking
+		
+		// get the file information
+		boolean isDir = true;
+		int inumber = current.get_next_Dir(filePathOld[filePathOld.length]);
+		if(inumber == -1) {
+			isDir = false;
+			inumber = current.get_next_File(filePathOld[filePathOld.length]);
+		}
+		if(inumber == -1) return;
+		
+		// delete the old file
+		current.deleteFile(filePathOld[filePathOld.length]);
+		
+		// create the new file
+		String[] filePathNew = newName.split("//"); // TODO error checking
+		currentNew.addFile(filePathNew[filePathNew.length - 1], inumber, isDir);
+		
+		disk.commitTrans(id);
+	}
+	
+	private DirEnt getCurDir(TransID id, String filename) throws IllegalArgumentException, IOException {
+		// parse filename
+		String[] filePath = filename.split("//"); // TODO error checking
+		for(String a: filePath) 
+			System.out.println(a);
+		
+		// use directories to find file
+		DirEnt current = getRootEntry(id);
+		for( int i = 0; i < filePath.length - 1; i++) {
+			int next = current.get_next_Dir(filePath[i]);
+			if(next == -1) {
+				System.out.println("Directory does not exist.");
+				disk.abortTrans(id);
+				return null;
+			}
+			current = new DirEnt(next, disk, id);
+		}
+		return current;
 	}
 
 
