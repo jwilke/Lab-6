@@ -68,17 +68,13 @@ public class DirEnt{
 
 		inum = inumber;
 		num_files = Common.byteToInt(meta, 34);
+
 		valid = true;
 
 
-		/*// read blocks and get included files
-		byte[] temp = new byte[FILES_ON_DISK];
-		for(int i = 0; i < num_files; i++) {
-			disk.read(id, inum, i * FILES_ON_DISK, FILES_ON_DISK, temp);
-			read_file_data(temp);
-		}*/
 		byte[] temp = new byte[FILES_ON_DISK * num_files];
 		disk.read(id, inumber, 0, FILES_ON_DISK * num_files, temp);
+
 		for(int i = 0; i < num_files; i++) {
 			getFileFromByte(i, temp);
 		}
@@ -110,7 +106,7 @@ public class DirEnt{
 		byte[] tempname;
 		tempname = files.get(index).getBytes();
 		for(int i = 0; i < tempname.length; i++) {
-			file[index*FILES_ON_DISK+i] = tempname[i];
+			file[index*FILES_ON_DISK+i*2] = tempname[i];
 		}
 
 		byte first = (byte) (fileInums.get(index) & 0xFF);
@@ -189,6 +185,7 @@ public class DirEnt{
 			addFileToByte(i, file);
 		}
 
+		System.out.println((new Tester()).arrayToString(file));
 		disk.write(id, inum, 0, num_files*FILES_ON_DISK, file);
 	}
 
@@ -218,7 +215,7 @@ public class DirEnt{
 
 
 
-
+		
 
 		// getInum
 		t.set_method("getInum()");
@@ -331,32 +328,32 @@ public class DirEnt{
 		// get_next_Dir(String)
 		t.set_method("get_next_dir(String)");
 		dr1 = new DirEnt("directory", 1);
-		dr1.addFile("a", 2, true);
-		dr1.addFile("b", 3, false);
-		dr1.addFile("c", 4, true);
-		dr1.addFile("d", 5, false);
-		dr1.addFile("e", 6, true);
-		dr1.addFile("f", 7, false);
+		dr1.addFile("aa", 2, true);
+		dr1.addFile("bb", 3, false);
+		dr1.addFile("cc", 4, true);
+		dr1.addFile("dd", 5, false);
+		dr1.addFile("ee", 6, true);
+		dr1.addFile("ff", 7, false);
 		dr1.addFile("g", 8, true);
 		dr1.addFile("h", 9, false);
 		dr1.addFile("i", 10, true);
 		dr1.addFile("j", 11, false);
 		dr1.addFile("k", 12, true);
-		dr1.addFile("l", 13, false);
+		dr1.addFile("lucky", 13, false);
 
-		t.is_equal(2, dr1.get_next_Dir("a"));
-		t.is_equal(-1, dr1.get_next_Dir("b"));
-		t.is_equal(4, dr1.get_next_Dir("c"));
-		t.is_equal(-1, dr1.get_next_Dir("d"));
-		t.is_equal(6, dr1.get_next_Dir("e"));
-		t.is_equal(-1, dr1.get_next_Dir("f"));
+		t.is_equal(2, dr1.get_next_Dir("aa"));
+		t.is_equal(-1, dr1.get_next_Dir("bb"));
+		t.is_equal(4, dr1.get_next_Dir("cc"));
+		t.is_equal(-1, dr1.get_next_Dir("dd"));
+		t.is_equal(6, dr1.get_next_Dir("ee"));
+		t.is_equal(-1, dr1.get_next_Dir("ff"));
 		t.is_equal(8, dr1.get_next_Dir("g"));
 		t.is_equal(-1, dr1.get_next_Dir("h"));
 		t.is_equal(10, dr1.get_next_Dir("i"));
 		t.is_equal(-1, dr1.get_next_Dir("j"));
 		t.is_equal(12, dr1.get_next_Dir("k"));
-		t.is_equal(-1, dr1.get_next_Dir("l"));
-		t.is_equal(-1, dr1.get_next_Dir("m"));
+		t.is_equal(-1, dr1.get_next_Dir("lucky"));
+		t.is_equal(-1, dr1.get_next_Dir("monkey"));
 
 
 
@@ -366,19 +363,19 @@ public class DirEnt{
 
 		// get_next_file(String)
 		t.set_method("get_next_Files(String)");
-		t.is_equal(-1, dr1.get_next_File("a"));
-		t.is_equal(3, dr1.get_next_File("b"));
-		t.is_equal(-1, dr1.get_next_File("c"));
-		t.is_equal(5, dr1.get_next_File("d"));
-		t.is_equal(-1, dr1.get_next_File("e"));
-		t.is_equal(7, dr1.get_next_File("f"));
+		t.is_equal(-1, dr1.get_next_File("aa"));
+		t.is_equal(3, dr1.get_next_File("bb"));
+		t.is_equal(-1, dr1.get_next_File("cc"));
+		t.is_equal(5, dr1.get_next_File("dd"));
+		t.is_equal(-1, dr1.get_next_File("ee"));
+		t.is_equal(7, dr1.get_next_File("ff"));
 		t.is_equal(-1, dr1.get_next_File("g"));
 		t.is_equal(9, dr1.get_next_File("h"));
 		t.is_equal(-1, dr1.get_next_File("i"));
 		t.is_equal(11, dr1.get_next_File("j"));
 		t.is_equal(-1, dr1.get_next_File("k"));
-		t.is_equal(13, dr1.get_next_File("l"));
-		t.is_equal(-1, dr1.get_next_File("m"));
+		t.is_equal(13, dr1.get_next_File("lucky"));
+		t.is_equal(-1, dr1.get_next_File("monkey"));
 
 
 
@@ -391,9 +388,9 @@ public class DirEnt{
 		for(index = 0; index < dr1.num_files; index++) {
 			dr1.addFileToByte(index, b1);
 			t.is_equal(((byte) 'a') + index, b1[+index*FILES_ON_DISK]);
-			for(int i = 1; i < 32; i++) {
-				t.is_equal(0, b1[i+index*FILES_ON_DISK]);
-			}
+			//for(int i = 1; i < 32; i++) {
+			//	t.is_equal(0, b1[i+index*FILES_ON_DISK]);
+			//}
 			t.is_equal(2+index, b1[32+index*FILES_ON_DISK]);
 			t.is_equal(0, b1[33+index*FILES_ON_DISK]);
 			t.is_equal((2+index+1)%2, b1[34+index*FILES_ON_DISK]);
@@ -405,13 +402,14 @@ public class DirEnt{
 
 
 		// getFileFromByte(int, byte[])
+		t.set_method("getFileFromBytes");
 		DirEnt dr2 = new DirEnt("directory", 1);
 		dr2.getFileFromByte(0, b1);
 		t.is_equal(0, dr2.num_files);
 		t.is_equal(1, dr2.files.size());
 		t.is_equal(1, dr2.fileInums.size());
 		t.is_equal(1, dr2.isDir.size());
-		t.is_equal("a", dr2.files.get(0));
+		t.is_equal("aa", dr2.files.get(0));
 		t.is_equal(2, dr2.fileInums.get(0).intValue());
 		t.is_equal(true, dr2.isDir.get(0));
 		
@@ -420,7 +418,7 @@ public class DirEnt{
 		t.is_equal(2, dr2.files.size());
 		t.is_equal(2, dr2.fileInums.size());
 		t.is_equal(2, dr2.isDir.size());
-		t.is_equal("b", dr2.files.get(1));
+		t.is_equal("bb", dr2.files.get(1));
 		t.is_equal(3, dr2.fileInums.get(1).intValue());
 		t.is_equal(false, dr2.isDir.get(1));
 		
@@ -429,7 +427,7 @@ public class DirEnt{
 		t.is_equal(3, dr2.files.size());
 		t.is_equal(3, dr2.fileInums.size());
 		t.is_equal(3, dr2.isDir.size());
-		t.is_equal("c", dr2.files.get(2));
+		t.is_equal("cc", dr2.files.get(2));
 		t.is_equal(4, dr2.fileInums.get(2).intValue());
 		t.is_equal(true, dr2.isDir.get(2));
 		
@@ -440,7 +438,7 @@ public class DirEnt{
 		
 		// print_to_disk
 		t.set_method("print_to_disk");
-		FlatFS ffs1 = new FlatFS(true);
+		FlatFS ffs1 = new FlatFS(false);
 		TransID id1 = ffs1.beginTrans();
 		int inum1 = ffs1.createFile(id1);
 		dr1.inum = inum1;
@@ -463,12 +461,14 @@ public class DirEnt{
 		t.is_equal(dr1.num_files, dr2.num_files);
 		t.is_equal(dr1.name, dr2.name);
 		for(int i = 0; i < dr1.num_files; i++) {
+			//System.out.println(dr2.files.get(i));
 			t.is_equal(dr1.files.get(i), dr2.files.get(i));
 			t.is_equal(dr1.fileInums.get(i), dr2.fileInums.get(i));
 			t.is_equal(dr1.isDir.get(i), dr2.isDir.get(i));
 		}
 		
-
+		
+		
 		for(int i = 0; i < 10000; i++) {
 			System.out.print("");
 		}

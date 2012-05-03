@@ -37,13 +37,14 @@ public class RFS{
 			int i = disk.createFile(id);
 			if(i != root) { throw new IllegalStateException("Root was not set up properly"); }
 			
-			byte[] buff = format_metadata("root", root, 0, true);
+			DirEnt rootEnt = getRootEntry(id);
+			rootEnt.addFile(".", root, true);
+			rootEnt.addFile("..", root, true);
+			rootEnt.print_to_disk(disk, id);
+			
+			byte[] buff = format_metadata("root", root, rootEnt.getNumFiles(), true);
 			
 			disk.writeFileMetadata(id, root, buff);
-			
-			DirEnt rootEnt = getRootEntry(id);
-			rootEnt.addFile("..", root, true);
-			rootEnt.addFile(".", root, true);
 			
 			disk.commitTrans(id);
 		}
@@ -290,7 +291,11 @@ public class RFS{
 	public int space(int fd)
 	throws IOException, IllegalArgumentException
 	{
-		return -1;
+		if(avail_fd == true && fd != 1) {
+			throw new IllegalArgumentException();
+		}
+		
+		return disk.getTotalBlocks(open_in) * PTree.BLOCK_SIZE_BYTES;
 	}
 
 	private DirEnt getRootEntry(TransID id) throws IllegalArgumentException, IOException {
@@ -319,7 +324,7 @@ public class RFS{
 		return data;
 	}
 	
-	public static void unit(Tester t) {
+	public static void unit(Tester t) throws IOException {
 		t.set_object("RFS");
 		
 		// format_metadata(String, int, int, boolean)
@@ -356,6 +361,26 @@ public class RFS{
 		
 		
 		// constructor(boolean)
+		t.set_method("constructor");
+		RFS rfs1 = new RFS(true);
+
+		t.is_true(rfs1.disk != null);
+		t.is_true(rfs1.avail_fd);
+		t.is_equal(-1, rfs1.open_in);
+		t.is_true(rfs1.open_xid == null);
+		
+		TransID xid1 = rfs1.disk.beginTrans();
+		byte[] buffer = new byte[1024];
+		rfs1.disk.read(xid1, 0, 0, 1024, buffer);
+		
+		DirEnt root1 = new DirEnt(rfs1.root, rfs1.disk, xid1);
+		t.is_equal(0,root1.getInum());
+		t.is_equal(0, root1.get_next_Dir("."));
+		t.is_equal(0, root1.get_next_Dir(".."));
+
+
+		
+		
 		// getRootEntry(TransID)
 		// getCurDirDir(TransID, String)
 		// createFile(String, boolean)
