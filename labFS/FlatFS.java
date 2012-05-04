@@ -169,10 +169,8 @@ public class FlatFS{
 		return ret;
 	}
 	
-	public int getTotalBlocks(int tnum) throws IllegalArgumentException, IOException {
-		TransID id = disk.beginTrans();
+	public int getTotalBlocks(TransID id, int tnum) throws IllegalArgumentException, IOException {
 		int ret =  disk.getMaxDataBlockId(id, tnum) + 1;
-		disk.commitTrans(id);
 		return ret;
 	}
 
