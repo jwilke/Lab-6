@@ -247,7 +247,7 @@ public class RFS{
 		if(isDir) {
 			DirEnt test = new DirEnt(inumber, disk, id);
 			test.change_parent(currentNew.getInum());
-			meta = format_metadata(test.getName(), test.getInum(), test.getNumFiles(), true); 
+			meta = format_metadata(fnewname, test.getInum(), test.getNumFiles(), true); 
 			disk.writeFileMetadata(id, test.getInum(), meta);
 			test.print_to_disk(disk, id);
 		}
@@ -282,7 +282,6 @@ public class RFS{
 	throws IOException, IllegalArgumentException
 	{
 		if(!avail_fd) {
-			System.out.println("avail?");
 			throw new IllegalArgumentException();
 		}
 		TransID id = disk.beginTrans();
@@ -290,14 +289,12 @@ public class RFS{
 
 		DirEnt current = getCurDir(id, filename);
 		if(current == null) {
-			System.out.println("bad dir?");
 			disk.abortTrans(id);
 			throw new IllegalArgumentException();
 		}
 
 		int inum = current.get_next_File(file[file.length-1]);
 		if(inum == -1) {
-			System.out.println("bad file?");
 			disk.abortTrans(id);
 			throw new IllegalArgumentException();
 		}
@@ -383,7 +380,7 @@ public class RFS{
 			throw new IllegalArgumentException();
 		}
 
-		return disk.getTotalBlocks(open_in) * PTree.BLOCK_SIZE_BYTES;
+		return disk.getTotalBlocks(open_xid, open_in) * PTree.BLOCK_SIZE_BYTES;
 	}
 
 	public int space(int fd)
@@ -393,7 +390,16 @@ public class RFS{
 			throw new IllegalArgumentException();
 		}
 
-		return disk.getTotalBlocks(open_in);
+		int blocks = disk.getTotalBlocks(open_xid, open_in);
+		if (blocks <= 8) return blocks+1;
+		
+		int b = blocks;
+		while(b > 0) {
+			blocks += (b-1)/256 + 1;
+			b /= 256;
+		}
+		
+		return blocks + 1;
 	}
 
 	private DirEnt getRootEntry(TransID id) throws IllegalArgumentException, IOException {
@@ -473,7 +479,7 @@ public class RFS{
 
 		// constructor(boolean)
 		t.set_method("constructor");
-		RFS rfs1 = new RFS(true);
+		RFS rfs1 = new RFS(false);
 
 		t.is_true(rfs1.disk != null);
 		t.is_true(rfs1.avail_fd);
@@ -485,7 +491,7 @@ public class RFS{
 		rfs1.disk.read(xid1, 0, 0, 1024, buffer);
 
 		DirEnt root1 = new DirEnt(rfs1.root, rfs1.disk, xid1);
-		t.is_equal(0,root1.getInum());
+		/*t.is_equal(0,root1.getInum());
 		t.is_equal(0, root1.get_next_Dir("."));
 		t.is_equal(0, root1.get_next_Dir(".."));
 		t.is_equal(2, root1.getNumFiles());
@@ -781,9 +787,11 @@ public class RFS{
 		t.is_equal("..", files[1]);
 
 		
+		
+		System.out.println("open");
 		// open(string)
 		t.set_method("open");
-		rfs1.open("/a");
+		fd1 = rfs1.open("/a");
 		t.is_equal(1, rfs1.open_in);
 		t.is_equal(false, rfs1.avail_fd);
 		t.is_true(rfs1.open_xid != null);
@@ -798,14 +806,142 @@ public class RFS{
 		
 		
 		
-		/*
+		System.out.println("close");
 		// close(int)
+		t.set_method("close");
+		rfs1.close(fd1);
+		t.is_equal(-1, rfs1.open_in);
+		t.is_equal(true, rfs1.avail_fd);
+		t.is_true(rfs1.open_xid == null);
+		
+		try{
+			rfs1.close(fd1);
+			t.is_true(false);
+		} catch (Exception e) {
+			t.is_true(true);
+		}
+		
+		
+		
+		System.out.println("read");
 		// read
+		t.set_method("read");
+		fd1 = rfs1.createFile("/d/z", true);
+		t.is_equal(1, fd1);
+		t.is_true(rfs1.open_xid != null);
+		t.is_true(!rfs1.avail_fd);
+		t.is_equal(4, rfs1.open_in);
+		
+		buffer = new byte[100];
+		rfs1.read(fd1, 0, 100, buffer);
+		t.is_equal(new byte[100], buffer);
+		
+		
+		
+		
+		
+		
 		// write
+		t.set_method("write");
+		byte[] bTest = new byte[100];
+		for(int i = 0; i < buffer.length; i++) {
+			//bTest[i] = (byte) (i%128);
+			buffer[i] = (byte) (i%128);
+		}
+		rfs1.write(fd1, 0, 100, buffer);
+		rfs1.read(fd1, 0, 100, bTest);
+		t.is_equal(buffer, bTest);
+		
+		//rfs1.close(fd1);
+		
+		
+		
+		
+		System.out.println("size");
 		// size
+		t.set_method("size");
+		t.is_equal(1024, rfs1.size(fd1));
+		
 		// space
+		t.set_method("space");
+		t.is_equal(2, rfs1.space(fd1));
 		
-		 */
 		
+		rfs1.write(fd1, 2048, 100, buffer);
+		rfs1.read(fd1, 2048, 100, bTest);
+		t.is_equal(bTest, buffer);
+		t.is_equal(1024*3, rfs1.size(fd1));
+		t.is_equal(4, rfs1.space(fd1));
+		
+		
+		buffer = new byte[1500];
+		for(int i = 0; i < buffer.length; i++) {
+			buffer[i] = (byte) (i%128);
+		}
+		bTest = new byte[1500];
+		rfs1.write(fd1, 1024*10, 1500, buffer);
+		rfs1.read(fd1, 1024*10, 1500, bTest);
+		t.is_equal(bTest, buffer);
+		t.is_equal(1024*12, rfs1.size(fd1));
+		t.is_equal(14, rfs1.space(fd1));
+		
+		rfs1.close(fd1);
+		t.is_equal(-1, rfs1.open_in);
+		t.is_equal(true, rfs1.avail_fd);
+		t.is_true(rfs1.open_xid == null);*/
+		
+		
+		DirEnt curEnt = null;
+		DirEnt curEnt2 = null;
+		//test rename
+		t.set_method("rename pt 2");
+		rfs1 = new RFS(true);
+		rfs1.createDir("/a");
+		rfs1.createDir("/b");
+		rfs1.createDir("/a/c");
+		
+		xid1 = rfs1.disk.beginTrans();
+		root1 = rfs1.getRootEntry(xid1);
+		curEnt = rfs1.getCurDir(xid1, "/a/c");
+		curEnt2 = rfs1.getCurDir(xid1, "/b/z");
+		rfs1.disk.commitTrans(xid1);
+		t.is_equal(4, root1.getNumFiles());
+		t.is_equal(3, curEnt.getNumFiles());
+		
+		t.is_equal(2, curEnt2.getNumFiles());
+		
+		rfs1.rename("/a/c", "/b/d");
+		xid1 = rfs1.disk.beginTrans();
+		root1 = rfs1.getRootEntry(xid1);
+		curEnt = rfs1.getCurDir(xid1, "/a/c");
+		curEnt2 = rfs1.getCurDir(xid1, "/b/z");
+		rfs1.disk.commitTrans(xid1);
+		
+		String s[] = curEnt.get_list_files();
+		System.out.println("a files:");
+		for(String a : s) System.out.print(a + "   " );
+		
+		s = curEnt2.get_list_files();
+		System.out.println("b files:");
+		for(String a : s) System.out.print(a + "   " );
+		
+		t.is_equal(4, root1.getNumFiles());
+		t.is_equal(2, curEnt.getNumFiles());
+		t.is_equal(3, curEnt2.getNumFiles());
+		t.is_true(curEnt2.get_next_Dir("d") != -1);
+		t.is_true(curEnt.get_next_Dir("c") == -1);
+		
+		/*rfs1.rename("/b/d", "/e");
+		xid1 = rfs1.disk.beginTrans();
+		root1 = rfs1.getRootEntry(xid1);
+		curEnt = rfs1.getCurDir(xid1, "/a/c");
+		curEnt2 = rfs1.getCurDir(xid1, "/b/z");
+		rfs1.disk.commitTrans(xid1);
+		t.is_equal(5, root1.getNumFiles());
+		t.is_equal(2, curEnt.getNumFiles());
+		t.is_equal(2, curEnt2.getNumFiles());
+		t.is_true(curEnt2.get_next_Dir("d") == -1);
+		t.is_true(curEnt.get_next_Dir("c") == -1);
+		t.is_true(root1.get_next_Dir("e") != -1);*/
 	}
 }
