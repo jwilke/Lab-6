@@ -54,7 +54,7 @@ handin-2: handin.tar
 handin-3: handin.tar
 	echo "FIX MAKEFILE TO INCLUDE THE TA user ID for the cs machines"
 	echo "Turning in handin.tar containing the following files:"
-	tar tf handin3.tar
+	tar tf handin.tar
 	$(TURNIN) --submit $(GRADER) $(LAB3_NAME) handin.tar
 
 handin.tar: clean

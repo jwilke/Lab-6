@@ -26,7 +26,8 @@ Common.java
 Usefull functions and a write class
 
 DirEnt.java
-Not used
+DirEnt is a class that will hold onto a single directory's information, including inumbers, names, and validity of the
+things it points towards.
 
 Disk.java
 The base disk, provided by teacher
@@ -56,10 +57,12 @@ PTree.java
 PTree manages the tree structure and the overhead of allocated space, including bit map
 
 ResourceException.java
-Not used
+Used when there's no more room on the disk for another file.
 
 RFS.java
-Not used
+Expands on the FlatFS by adding a hierarchical structure by creating files that represent directories.  It also adds
+a layer of abstraction by providing a file descriptor, which allows the end user to keep track of a single number
+instead of all the other overhead for editing a file.
 
 SimpleLock.java
 Our lock and condition variables
@@ -88,6 +91,9 @@ Part I design - The design starts with a transaction at the lowest level. IT con
 Part II design - This handles and groups blocks into an ordered tree. The PTree holds onto up to 512 root nodes called TNodes. This are held, five in a sector for the first 103 sectors after the log. When you create, write or add to this trees you will read the information from the disk and construct a TNode object. This will then find the blocks in question to write to. If it has to look to InternalNodes it will also construct them. When it is done a bit is set in the bitmap to show that that sector has been used. 
 
 
+Part III design - This manages files at a higher level.  To the end user, it references files by name instead of obscure numbers, making it easier to recognize.  Directories are introduced for organization.  They are represented by a single files who's data are pointers to other files and directories.  Other methods are added for ease of use, such as renaming and unlinking (deleting).  Whenever the RFS is created, a root directory is instantiated and all other files will be inside of it. Only one file can be opened, edited, and deleted at a time due to the restrictions of the FlatFS, trying to do more than that will result in a bad file descriptor.
+
+Everything is made atomic by the restriction of one-file-at-a-time symantics.  All of the changes are made to a single transaction, which either occurs exactly at creation if you don't want to open the file, or when closing if you do want to edit the file.  And since the file relies on a single transaction, we truly rely on a transaction being atomic, which was ensured long ago in part I of the design.
 
 
 3. We lock on the transaction class. In here we allow reads to read as much as they wont, until there is a write. When there is a write, then the reads have to wait. The two lists also lock. The writebacklist also has a wait when something tries to get something and it is empty. Lastly the logStatus also has a lock. 
@@ -96,3 +102,5 @@ Recovery works with the log. The first 1024 sectors are all part of hte log. The
 
 
 4. Our testing strategy is to first test all the base aspects of ADisk. Each class is unit tested and every method to make sure that nothing suprising happens. This ended up being more then 1000 tests. Then the ADisk is run with several tests, first with one thread and then with others. We changed how we did the multithreaded version running up to 8 different threads. And each of these tests were run at least 100 times to make sure there was no deadlock. When an error was found the mistake was tracked down. 
+
+We try a bunch of different stuff, including trying to open several files at once, renaming, moving structures, ensuring the corrent number of files stay inside a directory, etc.  Full tests require the disk to reformat to have a clean slate, so tests may run slow.
