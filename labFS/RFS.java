@@ -782,6 +782,22 @@ public class RFS{
 
 		
 		// open(string)
+		t.set_method("open");
+		rfs1.open("/a");
+		t.is_equal(1, rfs1.open_in);
+		t.is_equal(false, rfs1.avail_fd);
+		t.is_true(rfs1.open_xid != null);
+		
+		try{
+			rfs1.open("/b");
+			t.is_true(false);
+		} catch (Exception e) {
+			t.is_true(true);
+		}
+		
+		
+		
+		
 		/*
 		// close(int)
 		// read
