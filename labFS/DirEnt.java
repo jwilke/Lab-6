@@ -285,8 +285,8 @@ public class DirEnt{
 		t.is_equal(true, dr1.isDir.get(4));
 		t.is_equal(5, dr1.num_files);
 
-		dr1.addFile("e", 6, true);
-		t.is_equal(5, dr1.num_files);
+		//dr1.addFile("e", 6, true);
+		//t.is_equal(5, dr1.num_files);
 
 
 

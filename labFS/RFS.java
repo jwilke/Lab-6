@@ -115,8 +115,8 @@ public class RFS{
 		int inum = disk.createFile(id);
 
 		DirEnt dir = new DirEnt(filePath[filePath.length-1], inum);
-		dir.addFile("..", current.getInum(), true);
-		dir.addFile(".", inum, true);
+		dir.addFile(".", current.getInum(), true);
+		dir.addFile("..", inum, true);
 
 		// write files to disk
 		byte[] meta = format_metadata(filePath[filePath.length - 1], inum, 2, true); 
@@ -225,18 +225,20 @@ public class RFS{
 		byte[] meta = format_metadata(current.getName(), current.getInum(), current.getNumFiles(), true); 
 		disk.writeFileMetadata(id, current.getInum(), meta);
 		current.print_to_disk(disk, id);
-
+		
 		// create the new file
 		String[] filePathNew = newName.split("/");
 		String fnewname = filePathNew[filePathNew.length-1];
 		
 		//add file to new directory
+		currentNew = getCurDir(id, oldName);
 		try {
 			currentNew.addFile(fnewname, inumber, isDir);
 		} catch (IllegalArgumentException e) {
 			disk.abortTrans(id);
 			throw new IllegalArgumentException();
 		}
+		
 		meta = format_metadata(currentNew.getName(), currentNew.getInum(), currentNew.getNumFiles(), true); 
 		disk.writeFileMetadata(id, currentNew.getInum(), meta);
 		currentNew.print_to_disk(disk, id);
@@ -264,6 +266,7 @@ public class RFS{
 		DirEnt current = getRootEntry(id);
 		for( int i = 1; i < filePath.length - 1; i++) {
 			int next = current.get_next_Dir(filePath[i]);
+			//System.out.println(filePath[i]);
 			if(next == -1) {
 				System.out.println("Directory does not exist.");
 				disk.abortTrans(id);
@@ -348,8 +351,14 @@ public class RFS{
 		if(!avail_fd) {
 			throw new IllegalArgumentException();
 		}
+		
 		// get directory this file lives in
 		TransID id = disk.beginTrans();
+		if(dirname.equals("/")) {
+			String[] ret = getRootEntry(id).get_list_files();
+			disk.commitTrans(id);
+			return ret;
+		}
 		DirEnt current = getCurDir(id, dirname);
 		if(current == null) return null;
 
@@ -412,6 +421,19 @@ public class RFS{
 
 		return data;
 	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 
 	public static void unit(Tester t) throws IOException {
 		t.set_object("RFS");
@@ -485,6 +507,7 @@ public class RFS{
 
 
 		// getCurDirDir(TransID, String)
+		t.set_method("getCurDir");
 		DirEnt curEnt = rfs1.getCurDir(xid1, "/");
 		t.is_equal(0,curEnt.getInum());
 		t.is_equal(0, curEnt.get_next_Dir("."));
@@ -513,9 +536,9 @@ public class RFS{
 		}
 
 		curEnt.addFile("a", 1, true);
-		curEnt.addFile("d", 4, false);
+		curEnt.addFile("d", 4, true);
 		curEnt.addFile("e", 5, true);
-		curEnt.addFile("m", 13, false);
+		curEnt.addFile("m", 13, true);
 		curEnt.print_to_disk(rfs1.disk, xid1);
 		meta1 = RFS.format_metadata("root", curEnt.getInum(), curEnt.getNumFiles(), true);
 		rfs1.disk.writeFileMetadata(xid1,  curEnt.getInum(), meta1);
@@ -523,17 +546,99 @@ public class RFS{
 		rfs1.disk.commitTrans(xid1);
 		xid1 = rfs1.disk.beginTrans();
 		
-		curEnt = rfs1.getCurDir(xid1, "/a/b");
+		curEnt = rfs1.getCurDir(xid1, "/a/q");
 		t.is_equal(1,curEnt.getInum());
 		
-		curEnt = rfs1.getCurDir(xid1, "/e/b");
+		curEnt.addFile("b", 2, true);
+		curEnt.addFile("c", 3, true);
+		curEnt.print_to_disk(rfs1.disk, xid1);
+		meta1 = RFS.format_metadata(curEnt.getName(), curEnt.getInum(), curEnt.getNumFiles(), true);
+		rfs1.disk.writeFileMetadata(xid1,  curEnt.getInum(), meta1);
+		curEnt.print_to_disk(rfs1.disk, xid1);
+		rfs1.disk.commitTrans(xid1);
+		xid1 = rfs1.disk.beginTrans();
+		
+		curEnt = rfs1.getCurDir(xid1, "/a/b/q");
+		t.is_equal(2, curEnt.getInum());
+		
+		curEnt = rfs1.getCurDir(xid1, "/a/c/q");
+		t.is_equal(3, curEnt.getInum());
+		
+		
+		curEnt = rfs1.getCurDir(xid1, "/d/q");
+		t.is_equal(4,curEnt.getInum());
+		
+		curEnt = rfs1.getCurDir(xid1, "/e/q");
 		t.is_equal(5,curEnt.getInum());
 		
-		
-
+		curEnt.addFile("f", 6, true);
+		curEnt.addFile("g", 7, true);
+		curEnt.addFile("h", 8, true);
+		curEnt.print_to_disk(rfs1.disk, xid1);
+		meta1 = RFS.format_metadata(curEnt.getName(), curEnt.getInum(), curEnt.getNumFiles(), true);
+		rfs1.disk.writeFileMetadata(xid1,  curEnt.getInum(), meta1);
+		curEnt.print_to_disk(rfs1.disk, xid1);
 		rfs1.disk.commitTrans(xid1);
-
-
+		xid1 = rfs1.disk.beginTrans();
+		
+		curEnt = rfs1.getCurDir(xid1, "/e/f/q");
+		t.is_equal(6,curEnt.getInum());
+		
+		curEnt = rfs1.getCurDir(xid1, "/e/g/q");
+		t.is_equal(7,curEnt.getInum());
+		
+		curEnt = rfs1.getCurDir(xid1, "/e/h/q");
+		t.is_equal(8,curEnt.getInum());
+		
+		curEnt.addFile("i", 9, true);
+		curEnt.addFile("j", 10, true);
+		curEnt.print_to_disk(rfs1.disk, xid1);
+		meta1 = RFS.format_metadata(curEnt.getName(), curEnt.getInum(), curEnt.getNumFiles(), true);
+		rfs1.disk.writeFileMetadata(xid1,  curEnt.getInum(), meta1);
+		curEnt.print_to_disk(rfs1.disk, xid1);
+		rfs1.disk.commitTrans(xid1);
+		xid1 = rfs1.disk.beginTrans();
+		
+		curEnt = rfs1.getCurDir(xid1, "/e/h/i/q");
+		t.is_equal(9,curEnt.getInum());
+		
+		curEnt = rfs1.getCurDir(xid1, "/e/h/j/q");
+		t.is_equal(10,curEnt.getInum());
+		
+		curEnt.addFile("k", 11, true);
+		curEnt.addFile("l", 12, true);
+		curEnt.print_to_disk(rfs1.disk, xid1);
+		meta1 = RFS.format_metadata(curEnt.getName(), curEnt.getInum(), curEnt.getNumFiles(), true);
+		rfs1.disk.writeFileMetadata(xid1,  curEnt.getInum(), meta1);
+		curEnt.print_to_disk(rfs1.disk, xid1);
+		rfs1.disk.commitTrans(xid1);
+		xid1 = rfs1.disk.beginTrans();
+		
+		curEnt = rfs1.getCurDir(xid1, "/e/h/j/k/q");
+		t.is_equal(11,curEnt.getInum());
+		
+		curEnt = rfs1.getCurDir(xid1, "/e/h/j/l/q");
+		t.is_equal(12,curEnt.getInum());
+		
+		
+		curEnt = rfs1.getCurDir(xid1, "/m/q");
+		t.is_equal(13,curEnt.getInum());
+		rfs1.disk.commitTrans(xid1);
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		System.out.println("Testing RFS part 2");
 		// createFile(String, boolean)
 		t.set_method("createFile()");
 		rfs1 = new RFS(true);
@@ -547,6 +652,7 @@ public class RFS{
 		rfs1.disk.commitTrans(xid1);
 		
 		t.is_equal(3, root1.getNumFiles());
+		t.is_equal(1, root1.get_next_File("a"));
 		
 		fd1 = rfs1.createFile("/b", true);
 		t.is_equal(1, fd1);
@@ -554,9 +660,15 @@ public class RFS{
 		t.is_equal(true, rfs1.avail_fd);
 		xid1 = rfs1.disk.beginTrans();
 		root1 = rfs1.getRootEntry(xid1);
-		rfs1.disk.commitTrans(xid1);
 		
 		t.is_equal(4, root1.getNumFiles());
+		t.is_equal(2, root1.get_next_File("b"));
+		
+		rfs1.disk.commitTrans(xid1);
+		
+		
+		
+		
 		
 		
 		// createDir(String)
@@ -598,8 +710,15 @@ public class RFS{
 		t.is_equal(3, curEnt.getNumFiles());
 		t.is_equal(3, curEnt2.getNumFiles());
 		
+		
+		
+		
+		
+		
 		// unlink(String)
-		t.set_method("unline()");
+		System.out.println("unlink");
+		
+		t.set_method("unlink()");
 		rfs1.unlink("/c/d/e");
 		xid1 = rfs1.disk.beginTrans();
 		root1 = rfs1.getRootEntry(xid1);
@@ -618,6 +737,11 @@ public class RFS{
 		t.is_equal(5, root1.getNumFiles());
 		t.is_equal(2, curEnt.getNumFiles());
 		
+		
+		
+		
+		
+		System.out.println("rename");
 		// rename(string, String)
 		t.set_method("rename");
 		
@@ -629,13 +753,43 @@ public class RFS{
 		int inum = root1.get_next_Dir("d");
 		t.is_equal(3, inum);
 		
-		// size
-		// space
+		
+		
+		
+		
+		
+		System.out.println("readDir");
 		// readDir
+		t.set_method("readDir");
+		xid1 = rfs1.disk.beginTrans();
+		root1 = rfs1.getRootEntry(xid1);
+		rfs1.disk.commitTrans(xid1);
+		String[] files = rfs1.readDir("/");
+		t.is_equal(5, files.length);
+		t.is_equal(".", files[0]);
+		t.is_equal("..", files[1]);
+		t.is_equal("a", files[2]);
+		t.is_equal("b", files[3]);
+		t.is_equal("d", files[4]);
+		
+		xid1 = rfs1.disk.beginTrans();
+		root1 = rfs1.getRootEntry(xid1);
+		rfs1.disk.commitTrans(xid1);
+		files = rfs1.readDir("/d");
+		t.is_equal(2, files.length);
+		t.is_equal(".", files[0]);
+		t.is_equal("..", files[1]);
+
+		
 		// open(string)
+		/*
 		// close(int)
 		// read
 		// write
-
+		// size
+		// space
+		
+		 */
+		
 	}
 }

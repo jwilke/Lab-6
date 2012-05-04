@@ -199,6 +199,7 @@ public class PTree{
 	public int createTree(TransID xid) 
 	throws IOException, IllegalArgumentException, ResourceException
 	{
+		//System.out.println((new Tester()).arrayToString(allocTNodes));
 		// find a place for a new Tnode
 		int tnum = -1;
 		for(int i = 0; i < allocTNodes.length && tnum == -1; i++ ) {
